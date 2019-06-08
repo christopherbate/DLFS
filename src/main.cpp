@@ -36,7 +36,7 @@ int main(int argc, char **argv)
     cout << "Testing input layer creation "<< endl;
 
     InputLayer<float> inputLayer( network.GetCUDNN(), NULL );
-    
+
     TensorDims inputDim( 16, 128, 128, 128);    
     inputLayer.SetInputDim( inputDim );
 

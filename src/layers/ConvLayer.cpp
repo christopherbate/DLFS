@@ -113,8 +113,8 @@ void ConvLayer<T>::FindBestAlgorithm()
     checkCudaErrors(cudaFree(inputMem));
     checkCudaErrors(cudaFree(outputMem));
 
-    cout << "Best forward convolution performance result for this layer: "<< endl;
-    for(int i =0; i < 1; i++)    
+    cout << "Performance Results for this Layer: "<< endl;
+    for(int i =0; i < 8; i++)    
     {
         cout << i << ": " << GetConvAlgorithmString(perfResults[i].algo) << ", MathType: " << perfResults[i].mathType <<"\n";
         cout << "  Mem:" << perfResults[i].memory << ", " << " Time: " <<perfResults[i].time << endl;
