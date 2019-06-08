@@ -9,7 +9,7 @@ CXX_FLAGS :=
 
 CUDA_OPTS=--cudart static --relocatable-device-code=false -gencode arch=compute_61,code=compute_61 -gencode arch=compute_61,code=sm_61
 
-LIBS=-lnvjpeg -lcudnn -lcublasLt
+LIBS=-lnvjpeg -lcudnn -lcublas
 
 OBJS = src/main.o src/Image.o src/GPU.o src/Logging.o src/Network.o src/layers/InputLayer.o src/layers/ConvLayer.o src/layers/Layer.o src/Tensor.o
 

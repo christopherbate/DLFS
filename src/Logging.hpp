@@ -4,7 +4,7 @@
 #include <iostream>
 #include <nvjpeg.h>
 #include <cudnn.h>
-#include <cublasLt.h>
+#include <cublas.h>
 
 const char *cudaGetErrorName(nvjpegStatus_t error);
 const char *cudaGetErrorName(cudnnStatus_t error);
