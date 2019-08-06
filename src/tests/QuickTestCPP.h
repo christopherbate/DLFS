@@ -66,7 +66,9 @@ class TestCase
     {
         for (auto it = tests.begin(); it != tests.end(); it++)
         {
+            std::cout<<std::endl;
             (*it)->Run();
+            std::cout<<std::endl;     
             if((*it)->fail){
                 failCount++;
             }
@@ -116,7 +118,7 @@ class TestRunner
         {
             std::cout << it->first << std::endl;
             it->second->Run();
-            std::cout<<std::endl;     
+            std::cout<<std::endl<<std::endl;     
             it++;
         }           
     }

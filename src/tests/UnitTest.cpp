@@ -31,36 +31,20 @@ int main()
             float avgTime = 0.0;
             Timer timer;
             timer.tick();
-            if(annSrc.GetNumExamples() != 5000){
+            if (annSrc.GetNumExamples() != 5000)
+            {
                 return 0;
             }
             for (unsigned int i = 0; i < 5000; i++)
             {
-                const Example *ex = annSrc.GetExample(i);                
-                auto file_name = ex->file_name()->str();                
+                const Example *ex = annSrc.GetExample(i);
+                auto file_name = ex->file_name()->str();
                 avgTime += timer.tick();
             }
-            avgTime = avgTime/5000.0;
+            avgTime = avgTime / 5000.0;
 
             cout << "Average example load time: " << avgTime << endl;
 
-            return 1;
-        });
-
-    TestRunner::GetRunner()->AddTest(
-        "DataLoader",
-        "Can load test-case serialized dataset.",
-        []() {
-            DataLoader dataLoader("./test.ann.db","/models/data/coco/val2017/");
-            float avgTime = 0.0;
-            Timer timer;
-            timer.tick();
-            for(auto i =0; i <2; i++){
-                dataLoader.GetBatch();
-                avgTime += timer.tick();                
-            }            
-            avgTime = avgTime/2.0;
-            cout << "Average example load time: " << avgTime << endl;
             return 1;
         });
 
@@ -68,8 +52,9 @@ int main()
         "ImageLoader",
         "Can load jpegs.",
         []() {
-            ImageLoader imgLoader(1, 4);
+            ImageLoader imgLoader(2, 4);
             LocalSource localSrc("/models/data/coco/val2017/");
+            Tensor imgBatchTensor;
 
             auto img1 = localSrc.get_blob("000000000139.jpg");
             auto img2 = localSrc.get_blob("000000000285.jpg");
@@ -79,12 +64,48 @@ int main()
             float avgTime = 0.0;
             Timer timer;
             timer.tick();
-            for(auto i =0; i < 1; i++){
-                imgLoader.DecodeJPEG(data);
-                avgTime += timer.tick();                
-            }            
-            avgTime = avgTime/2.0;
-            cout << "Average image load time: " << avgTime << endl;
+            for (auto i = 0; i < 1; i++)
+            {
+                imgLoader.DecodeJPEG(data, imgBatchTensor);
+                avgTime += timer.tick();
+            }
+
+            auto count = 0;
+            for (auto devPtr : imgBatchTensor.GetIterablePointersOverBatch())
+            {
+                auto tensorShape = imgBatchTensor.GetShape();
+                string fileName = "./data/test_" + to_string(count) + ".bmp";
+                writeBMPi(fileName.c_str(), devPtr,
+                          3 * tensorShape[2], tensorShape[2], tensorShape[1]);
+                count++;
+            }
+            imgBatchTensor.Deallocate();
+            avgTime = avgTime / 2.0;
+            cout << "Average image decode time (2 imgs): " << avgTime
+                 << " msec" << endl;
+
+            return 1;
+        });
+
+    TestRunner::GetRunner()->AddTest(
+        "DataLoader",
+        "Can load test-case serialized dataset.",
+        []() {
+            DataLoader dataLoader("./test.ann.db", "/models/data/coco/val2017/", 5);
+            for (auto i = 0; i < 10; i++)
+            {
+                dataLoader.GetNextBatch();
+                dataLoader.Summary();
+            }
+            return 1;
+        });
+
+    TestRunner::GetRunner()->AddTest(
+        "DataLoader",
+        "Can load images from LocalSource and Decode.",
+        []() {
+            DataLoader dataLoader("./test.ann.db", "/models/data/coco/val2017/", 10);
+            dataLoader.Summary();
             return 1;
         });
 
