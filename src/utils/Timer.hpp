@@ -4,8 +4,9 @@
 #include <chrono>
 #include <cmath>
 
-struct Timer
+class Timer
 {
+public:
     std::chrono::time_point<std::chrono::steady_clock> last_time;
 
     float tick()
@@ -15,7 +16,7 @@ struct Timer
         unsigned int elapsed = std::chrono::duration_cast<std::chrono::microseconds>(time_now - last_time).count();
 
         last_time = time_now;
-        return elapsed/1000.0f;
+        return elapsed / 1000.0f;
     }
 };
 
