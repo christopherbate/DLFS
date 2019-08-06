@@ -3,20 +3,28 @@
 
 #include <string>
 
-#include "annotations_generated.h"
+#include "dataset_generated.h"
 
 namespace DLFS
 {
-class AnnotationSource
+class ExampleSource
 {
 public:
+    ExampleSource();
+    ~ExampleSource();
+
     void init(const std::string &path);
 
     const Example* GetExample(unsigned int idx);
 
+    unsigned int GetNumExamples(){
+        return m_numExamples;
+    }
+
 private:
     Dataset *m_dataset;
     unsigned int m_numExamples;
+    char *m_buffer;
 };
 } // namespace DLFS
 
