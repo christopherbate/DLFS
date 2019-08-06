@@ -4,26 +4,47 @@
 #include <string>
 #include <vector>
 #include <fstream>
+#include <tuple>
 
-#include "DataSource.hpp"
-#include "AnnotationSource.hpp"
-namespace DLFS{
+#include "LocalSource.hpp"
+#include "ExampleSource.hpp"
+#include "ImageLoader.hpp"
+#include "../tensor/TensorList.hpp"
+
+#define DATALOADER_PIPELINE_SIZE 5
+
+namespace DLFS
+{
+
+typedef std::tuple<Tensor, Tensor, Tensor> ObjDetExampleBatch;
+typedef std::array<float, 4> BBoxArray;
+
 class DataLoader
 {
-public: 
-    DataLoader();
+public:
+    DataLoader(const std::string &examples_path,
+               const std::string &local_data_dir,
+               unsigned int batchSize = 1);
     ~DataLoader();
 
-    int get_length();
-    int get_batch();
+    int GetLength();
+    void GetNextBatch();
+
+    void Summary();    
 
 private:
-    int m_batchSize;
+    unsigned int m_batchSize;
     int m_length;
     int m_batchIndex;
-    DataSource *m_dataSource;
-    AnnotationSource m_annSource;
+    int m_exampleIndex;
+    LocalSource m_dataSource;
+    ExampleSource m_exampleSource;
+    ImageLoader m_imgLoader;
+
+    std::array<Tensor, DATALOADER_PIPELINE_SIZE> m_imgBatches;
+    std::array<ObjDetExampleBatch, DATALOADER_PIPELINE_SIZE> m_exampleBatches;
+    unsigned int m_currPipelineBatch;
 };
-}
+} // namespace DLFS
 
 #endif
