@@ -6,8 +6,9 @@
 #include <fstream>
 #include <cstdint>
 #include <nvjpeg.h>
+#include <thread>
 
-#include "../tensor/Tensor.hpp"
+#include "../tensor/TensorList.hpp"
 
 namespace DLFS
 {
@@ -23,10 +24,11 @@ struct ImageInfo
 class ImageLoader
 {
 public:
-    ImageLoader(unsigned int batchSize, unsigned int maxHostThread = 4);
+    ImageLoader(unsigned int batchSize, unsigned int maxHostThread = 4, bool padToMax = true);
     ~ImageLoader();
 
-    std::vector<ImageInfo> DecodeJPEG(const std::vector<std::vector<uint8_t>> &buffer);
+    std::vector<ImageInfo> DecodeJPEG(const std::vector<std::vector<uint8_t>> &buffer,
+                                      Tensor &imgBatchTensor);
 
     void WriteBatchBMP();
 
@@ -34,7 +36,7 @@ public:
 
     void GetJPEGInfo(const std::vector<std::vector<uint8_t>> &dataBuffers, std::vector<ImageInfo> &imgInfoBufs);
 
-    void AllocateBuffers(ImageInfo &imgInfo, Tensor &tensor);
+    void AllocateBuffers(std::vector<ImageInfo> &imgInfo, Tensor &tenso);
 
 private:
     nvjpegHandle_t m_jpegHandle;
@@ -42,16 +44,17 @@ private:
     nvjpegOutputFormat_t m_outputFormat;
     cudaStream_t m_stream;
 
-    std::vector<nvjpegImage_t> m_jpegs;
-    std::vector<size_t> m_imgLengths;
-
     int m_maxHostThread;
     int m_batchSize;
     int m_dev;
     int m_warmpup;
     bool m_pipelined;
     bool m_batched;
+    bool m_padToMax;
 };
+
+int writeBMPi(const char *filename, const unsigned char *d_RGB, int pitch,
+              int width, int height);
 
 } // namespace DLFS
 

@@ -6,41 +6,32 @@
 #include "../tensor/Tensor.hpp"
 
 #include <cuda_runtime.h>
+#include <cassert>
+
+#include <dirent.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 using namespace DLFS;
 using namespace std;
 
-ImageLoader::ImageLoader(unsigned int batchSize, unsigned int maxHostThread) : m_batchSize(batchSize),
-																			   m_maxHostThread(maxHostThread)
+ImageLoader::ImageLoader(unsigned int batchSize, unsigned int maxHostThread, bool padToMax)
+	: m_batchSize(batchSize),
+	  m_maxHostThread(maxHostThread),
+	  m_padToMax(padToMax)
 {
-	m_outputFormat = NVJPEG_OUTPUT_RGB;
+	m_outputFormat = NVJPEG_OUTPUT_RGBI;
 
 	checkCudaErrors(nvjpegCreate(NVJPEG_BACKEND_DEFAULT, NULL, &m_jpegHandle));
 	checkCudaErrors(nvjpegJpegStateCreate(m_jpegHandle, &m_jpegState));
 	checkCudaErrors(nvjpegDecodeBatchedInitialize(m_jpegHandle, m_jpegState,
-												  m_batchSize, m_maxHostThread, m_outputFormat));
-
-	m_jpegs.resize(m_batchSize);
-	m_imgLengths.resize(m_batchSize);
-
-	// Create cuda Stream
+												  m_batchSize, m_maxHostThread, m_outputFormat));	
 	checkCudaErrors(cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking));
 }
 
 ImageLoader::~ImageLoader()
 {
-	// release cuda buffers
-	for (int i = 0; i < m_jpegs.size(); i++)
-	{
-		for (int c = 0; c < NVJPEG_MAX_COMPONENT; c++)
-		{
-			if (m_jpegs[i].channel[c])
-			{
-				cudaFree(m_jpegs[i].channel[c]);
-			}
-		}
-	}
-
 	checkCudaErrors(nvjpegJpegStateDestroy(m_jpegState));
 	checkCudaErrors(nvjpegDestroy(m_jpegHandle));
 
@@ -50,13 +41,15 @@ ImageLoader::~ImageLoader()
 /**
  * Inspects the JPEG header and returns channel information
  */
-void ImageLoader::GetJPEGInfo(const vector<std::vector<uint8_t>> &dataBuffers, std::vector<ImageInfo> &imgInfoBufs)
+void ImageLoader::GetJPEGInfo(const vector<std::vector<uint8_t>> &dataBuffers,
+							  std::vector<ImageInfo> &imgInfoBufs)
 {
+	assert(dataBuffers.size() == imgInfoBufs.size());
 	for (unsigned int i = 0; i < dataBuffers.size(); i++)
 	{
-		nvjpegGetImageInfo(m_jpegHandle, (unsigned char *)dataBuffers[i].data(), dataBuffers[i].size(),
-						   &imgInfoBufs[i].channels, &imgInfoBufs[i].subsampling,
-						   imgInfoBufs[i].widths, imgInfoBufs[i].heights);
+		checkCudaErrors(nvjpegGetImageInfo(m_jpegHandle, (unsigned char *)dataBuffers[i].data(), dataBuffers[i].size(),
+										   &imgInfoBufs[i].channels, &imgInfoBufs[i].subsampling,
+										   imgInfoBufs[i].widths, imgInfoBufs[i].heights));
 	}
 }
 
@@ -66,53 +59,34 @@ void ImageLoader::GetJPEGInfo(const vector<std::vector<uint8_t>> &dataBuffers, s
  * 
  * Mostly follows NVIDIA sample / docs
  * 
- * Currently, we have fixed our output format to be RGB, but extra logic is included 
- * in here from the sample in case that changes.
+ * Currently, we have fixed our output format to be RGBi for output to a NHWC tensor, 
+ * which is used for tensor cores.
  */
-void ImageLoader::AllocateBuffers(ImageInfo &imgInfo, Tensor &tensor)
+void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, Tensor &tensor)
 {
-	int mul = 1;
+	unsigned int idx = 0;
 
-	// in the case of interleaved RGB output, write only to single channel, but
-	// 3 samples at once
-	if (m_outputFormat == NVJPEG_OUTPUT_RGBI ||
-		m_outputFormat == NVJPEG_OUTPUT_BGRI)
+	TensorShapeList shapeList(imgInfos.size());
+
+	for (auto &imgInfo : imgInfos)
 	{
-		imgInfo.channels = 1;
-		mul = 3;
-	}
-	else if (m_outputFormat == NVJPEG_OUTPUT_RGB ||
-			 m_outputFormat == NVJPEG_OUTPUT_BGR)
-	{
-		imgInfo.channels = 3;
-		imgInfo.widths[1] = imgInfo.widths[2] = imgInfo.widths[0];
-		imgInfo.heights[1] = imgInfo.heights[2] = imgInfo.heights[0];
-	}
-	else
-	{
-		throw std::runtime_error(string("Unknown output format " + to_string(m_outputFormat)).c_str());
+		TensorShape tensorShape = {1, imgInfo.heights[0], imgInfo.widths[0], 3};
+		shapeList.SetShape(idx, tensorShape);
+		idx++;
 	}
 
-	// For RGB, all pitchs should be width[0], all channels
-	// should be of size pitch[0]*height
-	// For RGBi, pitch is width[0]*3 (hence mul factor)
-	std::array<int, 4> tensorShape;
-	for (int c = 0; c < imgInfo.channels; c++)
-	{
-		int pitch = mul * imgInfo.widths[c];
-		int sz = pitch * imgInfo.heights[c];
-		imgInfo.nvImage.pitch[c] = pitch;
-		// imgInfo.nvImage.channel[c] =
-		cudaMalloc(&imgInfo.nvImage.channel[c], sz);
-
-		//TODO: How to get this into tensor?
-		tensorShape[c] = sz;
-	}
-
-	// We are explicitly only allocating 3 channel tenosrs.
-	tensorShape = {1, imgInfo.heights[0], imgInfo.widths[0], 3};
-	tensor.SetShape(tensorShape);
+	TensorShape maxDims = shapeList.FindMaxDims();
+	tensor.SetShape({(int)imgInfos.size(), maxDims[1], maxDims[2], 3});
 	tensor.AllocateIfNecessary();
+
+	idx = 0;
+	for (auto devPtr : tensor.GetIterablePointersOverBatch())
+	{
+		imgInfos[idx].channels = 1;
+		imgInfos[idx].nvImage.pitch[0] = 3 * tensor.GetShape()[2];
+		imgInfos[idx].nvImage.channel[0] = devPtr;
+		idx++;
+	}
 }
 
 /**
@@ -122,27 +96,31 @@ void ImageLoader::AllocateBuffers(ImageInfo &imgInfo, Tensor &tensor)
  * Outputs:
  * 	Pointer to CUDA memory structs
  */
-std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &buffers)
+std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &buffers, Tensor &imgBatchTensor)
 {
 	std::vector<size_t> imgLengths;
 	std::vector<ImageInfo> imgInfoBufs(buffers.size());
+	std::vector<const unsigned char *> imgBuffers;
+	std::vector<nvjpegImage_t> nvjpegBuffer;
 
-	for (auto &&buf : buffers)
+	for (auto &buf : buffers)
 	{
 		imgLengths.push_back(buf.size());
+		imgBuffers.push_back(buf.data());
 	}
 
 	GetJPEGInfo(buffers, imgInfoBufs);
 
-	for (auto &imgInfo : imgInfoBufs)
-	{
-		Tensor tensor;
-		AllocateBuffers(imgInfo, tensor);
-	}
+	AllocateBuffers(imgInfoBufs, imgBatchTensor);
 
+	for (auto &img : imgInfoBufs)
+	{
+		nvjpegBuffer.push_back(img.nvImage);
+	}
+	cout << "Decoding ... " << endl;
 	checkCudaErrors(nvjpegDecodeBatched(m_jpegHandle, m_jpegState,
-										reinterpret_cast<const unsigned char *const *>(buffers.data()),
-										imgLengths.data(), m_jpegs.data(), m_stream));
+										imgBuffers.data(),
+										imgLengths.data(), nvjpegBuffer.data(), m_stream));
 	checkCudaErrors(cudaStreamSynchronize(m_stream));
 
 	return imgInfoBufs;
@@ -177,4 +155,131 @@ const char *ImageLoader::SamplingTypeString(nvjpegChromaSubsampling_t type)
 		return "Unknown chroma subsampling";
 	}
 	return "Unknown chroma subsampling";
+}
+
+int DLFS::writeBMPi(const char *filename, const unsigned char *d_RGB, int pitch,
+					int width, int height)
+{
+	unsigned int headers[13];
+	FILE *outfile;
+	int extrabytes;
+	int paddedsize;
+	int x;
+	int y;
+	int n;
+	int red, green, blue;
+
+	std::vector<unsigned char> vchanRGB(height * width * 3);
+	unsigned char *chanRGB = vchanRGB.data();
+	checkCudaErrors(cudaMemcpy2D(chanRGB, (size_t)width * 3, d_RGB, (size_t)pitch,
+								 width * 3, height, cudaMemcpyDeviceToHost));
+
+	extrabytes =
+		4 - ((width * 3) % 4); // How many bytes of padding to add to each
+	// horizontal line - the size of which must
+	// be a multiple of 4 bytes.
+	if (extrabytes == 4)
+		extrabytes = 0;
+
+	paddedsize = ((width * 3) + extrabytes) * height;
+
+	// Headers...
+	// Note that the "BM" identifier in bytes 0 and 1 is NOT included in these
+	// "headers".
+	headers[0] = paddedsize + 54; // bfSize (whole file size)
+	headers[1] = 0;				  // bfReserved (both)
+	headers[2] = 54;			  // bfOffbits
+	headers[3] = 40;			  // biSize
+	headers[4] = width;			  // biWidth
+	headers[5] = height;		  // biHeight
+
+	// Would have biPlanes and biBitCount in position 6, but they're shorts.
+	// It's easier to write them out separately (see below) than pretend
+	// they're a single int, especially with endian issues...
+
+	headers[7] = 0;			 // biCompression
+	headers[8] = paddedsize; // biSizeImage
+	headers[9] = 0;			 // biXPelsPerMeter
+	headers[10] = 0;		 // biYPelsPerMeter
+	headers[11] = 0;		 // biClrUsed
+	headers[12] = 0;		 // biClrImportant
+
+	if (!(outfile = fopen(filename, "wb")))
+	{
+		std::cerr << "Cannot open file: " << filename << std::endl;
+		return 1;
+	}
+
+	//
+	// Headers begin...
+	// When printing ints and shorts, we write out 1 character at a time to avoid
+	// endian issues.
+	//
+
+	fprintf(outfile, "BM");
+
+	for (n = 0; n <= 5; n++)
+	{
+		fprintf(outfile, "%c", headers[n] & 0x000000FF);
+		fprintf(outfile, "%c", (headers[n] & 0x0000FF00) >> 8);
+		fprintf(outfile, "%c", (headers[n] & 0x00FF0000) >> 16);
+		fprintf(outfile, "%c", (headers[n] & (unsigned int)0xFF000000) >> 24);
+	}
+
+	// These next 4 characters are for the biPlanes and biBitCount fields.
+
+	fprintf(outfile, "%c", 1);
+	fprintf(outfile, "%c", 0);
+	fprintf(outfile, "%c", 24);
+	fprintf(outfile, "%c", 0);
+
+	for (n = 7; n <= 12; n++)
+	{
+		fprintf(outfile, "%c", headers[n] & 0x000000FF);
+		fprintf(outfile, "%c", (headers[n] & 0x0000FF00) >> 8);
+		fprintf(outfile, "%c", (headers[n] & 0x00FF0000) >> 16);
+		fprintf(outfile, "%c", (headers[n] & (unsigned int)0xFF000000) >> 24);
+	}
+
+	//
+	// Headers done, now write the data...
+	//
+	for (y = height - 1; y >= 0;
+		 y--) // BMP image format is written from bottom to top...
+	{
+		for (x = 0; x <= width - 1; x++)
+		{
+			red = chanRGB[(y * width + x) * 3];
+			green = chanRGB[(y * width + x) * 3 + 1];
+			blue = chanRGB[(y * width + x) * 3 + 2];
+
+			if (red > 255)
+				red = 255;
+			if (red < 0)
+				red = 0;
+			if (green > 255)
+				green = 255;
+			if (green < 0)
+				green = 0;
+			if (blue > 255)
+				blue = 255;
+			if (blue < 0)
+				blue = 0;
+			// Also, it's written in (b,g,r) format...
+
+			fprintf(outfile, "%c", blue);
+			fprintf(outfile, "%c", green);
+			fprintf(outfile, "%c", red);
+		}
+		if (extrabytes) // See above - BMP lines must be of lengths divisible by 4.
+		{
+			for (n = 1; n <= extrabytes; n++)
+			{
+				fprintf(outfile, "%c", 0);
+			}
+		}
+	}
+
+	fclose(outfile);
+	return 0;
 }
