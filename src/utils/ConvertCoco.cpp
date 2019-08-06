@@ -1,5 +1,5 @@
 #include "../data_loading/DataSource.hpp"
-#include "../data_loading/annotations_generated.h"
+#include "../data_loading/dataset_generated.h"
 #include "json.hpp"
 
 #include <string>
