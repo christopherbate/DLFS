@@ -4,7 +4,7 @@ NVCC          := $(CUDA_PATH)/bin/nvcc -ccbin $(HOST_COMPILER)
 CXX := $(NVCC) -g
 FLAT_C := flatc
 
-CXX_FLAGS := 
+CXX_FLAGS := -Wall
 
 .PHONY = all clean dirs flatbuffers
 
@@ -13,13 +13,15 @@ CUDA_OPTS=
 
 LIBS=-lnvjpeg -lcudnn -lcublas
 
-OBJS = src/main.o src/data_loading/ImageLoader.o src/GPU.o src/Logging.o src/Network.o src/layers/InputLayer.o src/layers/ConvLayer.o \
-	src/layers/Layer.o src/data_loading/LocalSource.o src/data_loading/DataLoader.o src/data_loading/ExampleSource.o src/tensor/Tensor.o
+NON_MAIN_OBJS = src/data_loading/ImageLoader.o src/GPU.o src/Logging.o src/Network.o src/layers/InputLayer.o src/layers/ConvLayer.o \
+	src/layers/Layer.o src/data_loading/LocalSource.o src/data_loading/DataLoader.o src/data_loading/ExampleSource.o src/tensor/Tensor.o \
+	src/tensor/TensorList.o
 
-OBJS_UTILS = src/utils/ConvertCoco.o src/data_loading/ExampleSource.o
+OBJS = src/main.o $(NON_MAIN_OBJS)
 
-TEST_OBJS = src/tests/UnitTest.o src/data_loading/ExampleSource.o src/data_loading/DataLoader.o \
-	src/data_loading/ImageLoader.o src/data_loading/LocalSource.o src/Logging.o
+OBJS_UTILS = src/utils/ConvertCoco.o $(NON_MAIN_OBJS)
+
+TEST_OBJS = src/tests/UnitTest.o $(NON_MAIN_OBJS)	
 
 all: DLFS utils tests
 
@@ -70,5 +72,5 @@ flatbuffers:
 	$(FLAT_C) --cpp --gen-mutable -o ./src/data_loading/ ./src/data_loading/dataset.fbs 
 
 clean:
-	rm -rf ./bin/ ./.build/ $(OBJS)
+	rm -rf ./bin/ ./.build/ $(OBJS) $(OBJS_UTILS) $(TEST_OBJS)
 
