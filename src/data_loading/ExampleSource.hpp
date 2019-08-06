@@ -17,7 +17,7 @@ public:
 
     const Example* GetExample(unsigned int idx);
 
-    unsigned int GetNumExamples(){
+    inline const unsigned int GetNumExamples(){
         return m_numExamples;
     }
 
