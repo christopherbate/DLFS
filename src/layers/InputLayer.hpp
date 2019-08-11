@@ -11,12 +11,11 @@ template <typename T>
 class InputLayer : public Layer<T>
 {
 public:
-    InputLayer(cudnnHandle_t &handle, Layer<T> *prevLayer);
+    InputLayer(cudnnHandle_t &handle);
     ~InputLayer();
 
-    void SetInputDim(TensorDims &inputDims) override;
-
-    void AllocateBuffers() override;
+    void AllocateOutputBuffers() override;
+    void AllocateWeightBuffers(){}
 
 protected:
 };

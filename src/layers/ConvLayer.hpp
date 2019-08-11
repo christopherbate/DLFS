@@ -3,7 +3,7 @@
 
 #include <cudnn.h>
 #include "Layer.hpp"
-#include "../Tensor.hpp"
+#include "../tensor/Tensor.hpp"
 
 namespace DLFS{
 
@@ -13,6 +13,7 @@ struct FilterDims
     int width;
     int inputFeatures;
     int outputFeatures;
+    int stride;
 
     FilterDims()
     {
@@ -28,6 +29,7 @@ struct FilterDims
         width = w;
         inputFeatures = in;
         outputFeatures = out;
+        stride = 1;
     }
 };
 
@@ -35,12 +37,13 @@ template <typename T>
 class ConvLayer : public Layer<T>
 {
 public:
-    ConvLayer(cudnnHandle_t &handle, Layer<T> *prevLayer);
+    ConvLayer(cudnnHandle_t &handle, int filterSize, int stride = 1);
     virtual ~ConvLayer();
 
     void SetFilerDim(FilterDims &filterDims);
 
-    void AllocateBuffers() override;
+    void AllocateWeightBuffers();
+    void AllocateOutputBuffers();
 
     void FindBestAlgorithm();
     size_t GetAlgWorkspaceNeeded(cudnnConvolutionFwdAlgo_t alg);    
@@ -61,15 +64,15 @@ protected:
 public: /* Debug Functions*/
     void PrintAllWorkspaces();
 
-    size_t GetMemoryRequirements() override
-    {
-        return sizeof(T)*(this->m_outputDims.Length()+m_filterDims.Length());
-    }
+    // size_t GetMemoryRequirements() override
+    // {
+    //     return sizeof(T)*(this->m_outputDims.Length()+m_filterDims.Length());
+    // }
 
-    void Print()
-    {
-        std::cout << "Conv Layer:" <<"\n" << "Mem Req: " << GetMemoryRequirements() /1e6 <<" MB" << std::endl;
-    }
+    // void Print()
+    // {
+    //     std::cout << "Conv Layer:" <<"\n" << "Mem Req: " << GetMemoryRequirements() /1e6 <<" MB" << std::endl;
+    // }
 };
 
 }

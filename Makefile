@@ -1,76 +1,64 @@
 HOST_COMPILER ?= g++
 CUDA_PATH := /usr/local/cuda
-NVCC          := $(CUDA_PATH)/bin/nvcc -ccbin $(HOST_COMPILER)
-CXX := $(NVCC) -g
+NVCC := $(CUDA_PATH)/bin/nvcc
+CXX := $(NVCC) 
 FLAT_C := flatc
-
-CXX_FLAGS := -Wall
-
-.PHONY = all clean dirs flatbuffers
-
-# CUDA_OPTS=--cudart static --relocatable-device-code=false -gencode arch=compute_61,code=compute_61 -gencode arch=compute_61,code=sm_61
+CXX_FLAGS := --compiler-options -Wall --compiler-options -Werror --compiler-options -MMD \
+			 --compiler-options -Wextra -I ./src/ --gpu-architecture=compute_75 --compiler-options -g
 CUDA_OPTS=
+LIBS := -lnvjpeg -lcudnn -lcublas
+OBJDIR := .build
 
-LIBS=-lnvjpeg -lcudnn -lcublas
+.PHONY = all clean dirs 
 
-NON_MAIN_OBJS = src/data_loading/ImageLoader.o src/GPU.o src/Logging.o src/Network.o src/layers/InputLayer.o src/layers/ConvLayer.o \
-	src/layers/Layer.o src/data_loading/LocalSource.o src/data_loading/DataLoader.o src/data_loading/ExampleSource.o src/tensor/Tensor.o \
-	src/tensor/TensorList.o
+FLATBUFFERS := src/data_loading/dataset_generated.h
 
-OBJS = src/main.o $(NON_MAIN_OBJS)
+DIRS := bin $(OBJDIR) $(OBJDIR)/data_loading $(OBJDIR)/tensor \
+		$(OBJDIR)/utils $(OBJDIR)/tests $(OBJDIR)/operations
 
-OBJS_UTILS = src/utils/ConvertCoco.o $(NON_MAIN_OBJS)
+# Object definitions
+_NON_MAIN_OBJS = GPU.o data_loading/ImageLoader.o Logging.o \
+			     data_loading/LocalSource.o data_loading/DataLoader.o \
+				 data_loading/ExampleSource.o tensor/Tensor.o tensor/TensorList.o \
+				 operations/Convolution.o tensor/AutoDiff.o 
 
-TEST_OBJS = src/tests/UnitTest.o $(NON_MAIN_OBJS)	
+NON_MAIN_OBJS = $(addprefix $(OBJDIR)/, $(_NON_MAIN_OBJS))
 
-all: DLFS utils tests
+DLFS_OBJS = .build/main.o $(NON_MAIN_OBJS)
+CONVERT_UTIL_OBJS = .build/utils/ConvertCoco.o $(NON_MAIN_OBJS)
 
-DLFS: $(OBJS) 
-	$(NVCC) -o bin/dlfs $(LIBS) $(CUDA_OPTS) $(OBJS)
+_TEST_OBJS = UnitTest.o TestTensor.o TestAutoDiff.o TestGPU.o TestDataLoader.o
+UNIT_TEST_OBJS = $(addprefix $(OBJDIR)/tests/, $(_TEST_OBJS)) $(NON_MAIN_OBJS)
 
-utils: $(OBJS_UTILS)
-	$(NVCC) -o bin/convert_coco $(LIBS) $(CUDA_OPTS) $(OBJS_UTILS) 
+ALL_OBJS = $(DLFS_OBJS) $(CONVERT_UTIL_OBJS) $(UNIT_TEST_OBJS)
 
-tests: $(TEST_OBJS)
-	$(NVCC) -o bin/test $(LIBS) $(CUDA_OPTS) $(TEST_OBJS) 
+EXECUTABLES := DLFS utils tests
 
-$(OBJS): | dirs
-$(OBJS): | flatbuffers
+DEPS = $(ALL_OBJS:.o=.d)
 
-src/utils/ConvertCoco.o: src/utils/ConvertCoco.cpp
+$(OBJDIR)/%.o: src/%.cpp
+	$(CXX) $(CXX_FLAGS) -c $< -o $@
 
-src/data_loading/ImageLoader.o: src/data_loading/ImageLoader.hpp src/Logging.hpp
+all: $(EXECUTABLES)
+	
+DLFS: $(DLFS_OBJS)
+	$(NVCC) -o bin/dlfs $(LIBS) $(CUDA_OPTS) $(DLFS_OBJS)
 
-src/Network.o: src/Network.hpp src/Logging.hpp
+utils: $(CONVERT_UTIL_OBJS)
+	$(NVCC) -o bin/convert_coco $(LIBS) $(CUDA_OPTS) $(CONVERT_UTIL_OBJS)
 
-src/Main.o: src/Logging.hpp src/GPU.hpp src/Network.hpp src/layers/ConvLayer.hpp src/layers/InputLayer.hpp
+tests: $(UNIT_TEST_OBJS)
+	$(NVCC) -o bin/test $(LIBS) $(CUDA_OPTS) $(UNIT_TEST_OBJS)
 
-src/GPU.o: src/GPU.hpp src/Logging.hpp
+$(CONVERT_UTIL_OBJS) $(UNIT_TEST_OBJS) $(DLFS_OBJS):  $(FLATBUFFERS) | $(DIRS)
 
-src/Logging.o: src/Logging.hpp
+$(DIRS):
+	mkdir -p $(DIRS)	
 
-src/tensor/Tensor.o: src/tensor/Tensor.hpp
-
-src/layers/Layer.o: src/layers/Layer.hpp
-
-src/layers/ConvLayer.o: src/layers/ConvLayer.hpp src/layers/Layer.hpp
-
-src/layers/InputLayer.o: src/layers/InputLayer.hpp src/layers/Layer.hpp
-
-src/data_loading/LocalSource.o: src/data_loading/LocalSource.hpp
-
-src/data_loading/DataLoader.o: src/data_loading/DataLoader.hpp
-
-src/data_loading/ExampleSource.o: src/data_loading/ExampleSource.hpp src/data_loading/dataset_generated.h
-
-src/tests/UnitTest.cpp: src/data_loading/ExampleSource.hpp
-
-dirs:
-	mkdir -p ./bin/ ./.build/
-
-flatbuffers:
+./src/data_loading/dataset_generated.h: ./src/data_loading/dataset.fbs
 	$(FLAT_C) --cpp --gen-mutable -o ./src/data_loading/ ./src/data_loading/dataset.fbs 
 
 clean:
-	rm -rf ./bin/ ./.build/ $(OBJS) $(OBJS_UTILS) $(TEST_OBJS)
+	rm -rf $(DIRS) $(FLATBUFFERS) $(DEPS)
 
+-include $(DEPS)

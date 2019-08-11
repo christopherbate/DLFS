@@ -14,7 +14,7 @@ namespace DLFS
 template <typename T>
 class Network
 {
-private:
+protected:
     cudnnHandle_t m_cudnnHandle;
     std::vector<Layer<T>> m_layers;
     unsigned int m_batchSize;
@@ -28,10 +28,10 @@ public:
         return m_cudnnHandle;
     }
 
-    void Forward(NHWCBuffer<T> &inputData);
+    // void Forward(NHWCBuffer<T> &inputData);
     void Backward();
 
-    void CreateTestTensor(NHWCBuffer<T> &output);
+    // void CreateTestTensor(NHWCBuffer<T> &output);
 };
 
 } // namespace DLFS

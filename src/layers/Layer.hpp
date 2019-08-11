@@ -3,7 +3,7 @@
 
 #include <cudnn.h>
 
-#include "../Tensor.hpp"
+#include "../tensor/Tensor.hpp"
 
 namespace DLFS{
     
@@ -11,37 +11,21 @@ template <typename T>
 class Layer
 {
 public:
-    Layer(cudnnHandle_t &handle, Layer<T> *prevLayer);
+    Layer(cudnnHandle_t &handle);
     virtual ~Layer();
 
     virtual void Forward();
     virtual void Backward();
 
+    virtual void SetInputLayer(Layer<T> *layer);    
+
     cudnnTensorDescriptor_t GetOutputTensorDesc()
     {
         return m_outputTd;
-    }
+    }  
 
-    const TensorDims &GetOutputDims()
-    {
-        return m_outputDims;
-    }
-
-    const TensorDims &GetInputDims()
-    {
-        return m_inputDims;
-    }
-
-    virtual void SetInputDim(TensorDims &inputDims){
-        m_inputDims = inputDims;
-    }
-
-    virtual size_t GetMemoryRequirements()
-    {
-        return sizeof(T)*(m_inputDims.Length()+m_outputDims.Length());
-    }    
-
-    virtual void AllocateBuffers(){};   
+    virtual void AllocateOutputBuffers() = 0;
+    virtual void AllocateWeightBuffers() = 0;
 
     uint8_t *GetOutputBuffer(){
         return m_outputBuffer;
@@ -49,8 +33,6 @@ public:
 
 protected:
     cudnnHandle_t &m_handle;
-    TensorDims m_inputDims;
-    TensorDims m_outputDims;
     Layer<T> *m_prevLayer;
     cudnnTensorDescriptor_t m_outputTd;
     uint8_t *m_outputBuffer;    
