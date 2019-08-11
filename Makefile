@@ -4,7 +4,7 @@ NVCC := $(CUDA_PATH)/bin/nvcc
 CXX := $(NVCC) 
 FLAT_C := flatc
 CXX_FLAGS := --compiler-options -Wall --compiler-options -Werror --compiler-options -MMD \
-			 --compiler-options -Wextra -I ./src/ --gpu-architecture=compute_75 --compiler-options -g
+			 --compiler-options -Wextra -I ./src/ --gpu-architecture=compute_75 -lineinfo 
 CUDA_OPTS=
 LIBS := -lnvjpeg -lcudnn -lcublas
 OBJDIR := .build
@@ -17,9 +17,9 @@ DIRS := bin $(OBJDIR) $(OBJDIR)/data_loading $(OBJDIR)/tensor \
 		$(OBJDIR)/utils $(OBJDIR)/tests $(OBJDIR)/operations
 
 # Object definitions
-_NON_MAIN_OBJS = GPU.o data_loading/ImageLoader.o Logging.o \
+_NON_MAIN_OBJS = GPU.o tensor/Tensor.o data_loading/ImageLoader.o Logging.o \
 			     data_loading/LocalSource.o data_loading/DataLoader.o \
-				 data_loading/ExampleSource.o tensor/Tensor.o tensor/TensorList.o \
+				 data_loading/ExampleSource.o  tensor/TensorList.o \
 				 operations/Convolution.o tensor/AutoDiff.o 
 
 NON_MAIN_OBJS = $(addprefix $(OBJDIR)/, $(_NON_MAIN_OBJS))
