@@ -11,10 +11,6 @@ TensorList::TensorList(int listSize) : m_listSize(listSize)
 
 TensorList::~TensorList()
 {
-    for (auto &tensor : m_tensors)
-    {
-        tensor.Deallocate();
-    }
 }
 
 void TensorList::SetTensorShape(unsigned int idx, TensorShape &shape)
