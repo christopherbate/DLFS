@@ -33,7 +33,7 @@ void DataLoader::GetNextBatch()
     vector<vector<BBoxArray>> boxes(m_batchSize);
     vector<vector<uint32_t>> catIds(m_batchSize);
     TensorShapeList boxShape(m_batchSize);
-    for (auto i = 0; i < m_batchSize; i++)
+    for (unsigned int i = 0; i < m_batchSize; i++)
     {
         const Example *ex = m_exampleSource.GetExample(m_exampleIndex);
 
@@ -54,7 +54,7 @@ void DataLoader::GetNextBatch()
     auto annMaxDims = boxShape.FindMaxDims();
     bboxBatchTensor.SetShape(m_batchSize, annMaxDims[1], 4, 1);
     bboxBatchTensor.SetPitch(4);
-    catIdBatchTensor.SetShape(m_batchIndex, annMaxDims[1], 1, 1);
+    catIdBatchTensor.SetShape(m_batchSize, annMaxDims[1], 1, 1);
     catIdBatchTensor.SetPitch(4);
     bboxBatchTensor.AllocateIfNecessary();
     catIdBatchTensor.AllocateIfNecessary();

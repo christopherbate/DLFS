@@ -44,13 +44,14 @@ private:
     nvjpegOutputFormat_t m_outputFormat;
     cudaStream_t m_stream;
 
-    int m_maxHostThread;
     int m_batchSize;
+    int m_maxHostThread;
+    bool m_padToMax;
+
     int m_dev;
     int m_warmpup;
     bool m_pipelined;
-    bool m_batched;
-    bool m_padToMax;
+    bool m_batched;    
 };
 
 int writeBMPi(const char *filename, const unsigned char *d_RGB, int pitch,

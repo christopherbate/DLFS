@@ -1,5 +1,7 @@
-#ifndef GPU_H
-#define GPU_H
+#pragma once
+
+#include <vector>
+#include <cudnn.h>
 
 namespace DLFS
 {
@@ -14,12 +16,17 @@ public:
 
 private:
     Properties m_props;
+    std::vector<cudnnHandle_t> m_cudnnHandles;
 
 public:
     GPU();
     ~GPU();
+
+    inline cudnnHandle_t GetCUDNNHandle(){
+        return m_cudnnHandles[0];
+    }
 };
 
-}
+extern GPU GPUContext;
 
-#endif
+}

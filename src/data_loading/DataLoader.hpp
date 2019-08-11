@@ -41,10 +41,9 @@ private:
     ExampleSource m_exampleSource;
     ImageLoader m_imgLoader;
 
-    std::array<Tensor, DATALOADER_PIPELINE_SIZE> m_imgBatches;
     std::array<ObjDetExampleBatch, DATALOADER_PIPELINE_SIZE> m_exampleBatches;
     unsigned int m_currPipelineBatch;
 };
 } // namespace DLFS
 
-#endif
+#endif 
