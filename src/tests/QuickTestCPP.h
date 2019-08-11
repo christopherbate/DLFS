@@ -36,6 +36,8 @@ const std::string RED = "\033[1;31m";
 const std::string GRN = "\033[32m";
 const std::string RST = "\033[0m";
 
+#define QTEqual(val1, val2) QuickTest::Equal(val1, val2, __FILE__, __LINE__)
+
 /**
  * Test Exception class
  */
@@ -64,6 +66,15 @@ public:
         if (a != b)
         {
             std::string msg = "NotEqual: " + std::to_string(a) + " != " + std::to_string(b);
+            throw QuickTestError(msg);
+        }
+    }
+    static void Equal(int a, int b, const char *file, const int line)
+    {
+        if (a != b)
+        {
+            std::string msg = "Test Failure at " + std::string{file} + ":" + std::to_string(line) +
+                              " NotEqual: " + std::to_string(a) + " != " + std::to_string(b);
             throw QuickTestError(msg);
         }
     }
