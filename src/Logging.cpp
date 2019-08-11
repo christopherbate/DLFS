@@ -30,6 +30,9 @@ const char *cudaGetErrorName(nvjpegStatus_t error) {
 
     case NVJPEG_STATUS_INTERNAL_ERROR:
       return "NVJPEG_STATUS_INTERNAL_ERROR";
+
+    case NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED:
+      return "NVJPEG_STATUS_IMPLEMENTATION_NOT_SUPPORTED";
   }
 
   return "<unknown>";
