@@ -8,6 +8,8 @@
 
 namespace DLFS
 {
+
+template <typename T>
 class TensorList
 {
 public:
@@ -16,8 +18,8 @@ public:
 
     void SetTensorShape(unsigned int idx, TensorShape &shape);
 
-    Tensor &GetMutableTensor(unsigned int idx);
-    const Tensor &GetTensor(unsigned int idx);
+    Tensor<T> &GetMutableTensor(unsigned int idx);
+    const Tensor<T> &GetTensor(unsigned int idx);
 
     TensorShape FindMaxDims();
 
@@ -26,12 +28,12 @@ public:
         return m_tensors.size();
     }
 
-    std::vector<Tensor> &GetMutableIterable();
+    std::vector<Tensor<T>> &GetMutableIterable();
 
 private:
     int m_listSize;
-    std::vector<Tensor> m_tensors;
-    Tensor m_combinedTensor;
+    std::vector<Tensor<T>> m_tensors;
+    Tensor<T> m_combinedTensor;
 };
 
 class TensorShapeList

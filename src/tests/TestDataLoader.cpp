@@ -54,7 +54,7 @@ void TestDataLoader()
         []() {
             ImageLoader imgLoader(2, 4);
             LocalSource localSrc("/models/data/coco/val2017/");
-            Tensor imgBatchTensor;
+            Tensor<uint8_t> imgBatchTensor;
 
             auto img1 = localSrc.get_blob("000000000139.jpg");
             auto img2 = localSrc.get_blob("000000000285.jpg");

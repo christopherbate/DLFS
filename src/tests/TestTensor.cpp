@@ -13,15 +13,17 @@ void TestTensor()
         "Tensor",
         "Can allocate and deallocate tensor.",
         []() {
-            Tensor tensor;
-            tensor.SetShape(1, 10, 10, 3);
-            tensor.SetPitch(2);
+            ADContext.Reset();
+            
+            Tensor<float> tensor;
+            tensor.SetShape(1, 10, 10, 3);            
 
             QuickTest::Equal(tensor.GetPointer(), nullptr);
+            QuickTest::Equal(tensor.GetPitch(), 4);
 
             tensor.AllocateIfNecessary();
 
-            QuickTest::Equal(tensor.GetExpectedSize(), 1 * 10 * 10 * 3 * 2);
+            QuickTest::Equal(tensor.GetExpectedSize(), 4 * 10 * 10 * 3);
             QuickTest::NotEqual(tensor.GetPointer(), nullptr);
         });
 
@@ -29,11 +31,13 @@ void TestTensor()
         "Tensor",
         "Can create TensorPtr",
         []() {
-            TensorPtr tensor = std::make_shared<Tensor>();
-            tensor->SetShape(1, 128, 128, 3);
-            tensor->SetPitch(4);
+            ADContext.Reset();
+
+            TensorPtr<float> tensor = std::make_shared<Tensor<float>>();
+            tensor->SetShape(1, 128, 128, 3);            
 
             QuickTest::Equal(tensor->GetPointer(), nullptr);
+            QuickTest::Equal(tensor->GetPitch(), 4);
 
             tensor->AllocateIfNecessary();
 
@@ -44,17 +48,20 @@ void TestTensor()
         "Tensor",
         "Can convolve TensorPtr's",
         []() {
-            TensorPtr features = std::make_shared<Tensor>();
-            features->SetShape(1, 128, 128, 3);
-            features->SetPitch(4);
+            ADContext.Reset();
+
+            TensorPtr<float> features = std::make_shared<Tensor<float>>();
+            features->SetShape(1, 128, 128, 3);            
             features->AllocateIfNecessary();
+            features->SetName("features");
 
-            TensorPtr filter = std::make_shared<Tensor>();
-            filter->SetFilterShape(3, 1, 3, 3);
-            filter->SetPitch(4);
+            TensorPtr<float> filter = std::make_shared<Tensor<float>>();
+            filter->SetFilterShape(3, 1, 3, 3);            
             filter->AllocateIfNecessary();
+            filter->SetName("filter");
 
-            TensorPtr result = features->Convolve(filter);
+            TensorPtr<float> result = features->Convolve(filter);
+            result->SetName("output");
 
             /*
             Check for dangling pointers. at this point, 
@@ -62,9 +69,9 @@ void TestTensor()
             tracked by the global auto diff context.            
             */
             
-            QuickTest::Equal(features.use_count(), 2);
-            QuickTest::Equal(filter.use_count(), 2);
-            QuickTest::Equal(result.use_count(), 2);
+            QTEqual(features.use_count(), 2);
+            QTEqual(filter.use_count(), 2);
+            QTEqual(result.use_count(), 3);
 
             /*
             Reset the auto diff should make it so that 

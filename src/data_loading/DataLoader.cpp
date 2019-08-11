@@ -23,9 +23,9 @@ void DataLoader::GetNextBatch()
 {
     // retrieve next available tensor
     assert(m_currPipelineBatch < DATALOADER_PIPELINE_SIZE);
-    Tensor &imgBatchTensor = std::get<0>(m_exampleBatches[m_currPipelineBatch]);
-    Tensor &bboxBatchTensor = std::get<1>(m_exampleBatches[m_currPipelineBatch]);
-    Tensor &catIdBatchTensor = std::get<2>(m_exampleBatches[m_currPipelineBatch]);
+    Tensor<uint8_t> &imgBatchTensor = std::get<0>(m_exampleBatches[m_currPipelineBatch]);
+    Tensor<float> &bboxBatchTensor = std::get<1>(m_exampleBatches[m_currPipelineBatch]);
+    Tensor<float> &catIdBatchTensor = std::get<2>(m_exampleBatches[m_currPipelineBatch]);
     m_currPipelineBatch = (m_currPipelineBatch + 1) % DATALOADER_PIPELINE_SIZE;
 
     // Load examples and image binaries
@@ -53,9 +53,7 @@ void DataLoader::GetNextBatch()
     // Allocate the label tensors.
     auto annMaxDims = boxShape.FindMaxDims();
     bboxBatchTensor.SetShape(m_batchSize, annMaxDims[1], 4, 1);
-    bboxBatchTensor.SetPitch(4);
     catIdBatchTensor.SetShape(m_batchSize, annMaxDims[1], 1, 1);
-    catIdBatchTensor.SetPitch(4);
     bboxBatchTensor.AllocateIfNecessary();
     catIdBatchTensor.AllocateIfNecessary();
 

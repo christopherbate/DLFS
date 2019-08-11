@@ -11,6 +11,7 @@
 namespace DLFS
 {
 
+template<typename T>
 class Convolution : public TrackableOp
 {
 public:
@@ -22,17 +23,17 @@ public:
 
     void Execute();
 
-    inline void SetFilter(TensorPtr p)
+    inline void SetFilter(TensorPtr<T> p)
     {
         m_filter = p;
     }
 
-    inline void SetFeatures(TensorPtr p)
+    inline void SetFeatures(TensorPtr<T> p)
     {
         m_features = p;
     }
 
-    inline void SetOutput(TensorPtr p)
+    inline void SetOutput(TensorPtr<T> p)
     {
         m_output = p;
     }
@@ -40,10 +41,10 @@ public:
 private:
     void Reset();
 
-    TensorPtr m_features;
-    TensorPtr m_filter;
-    TensorPtr m_bias;
-    TensorPtr m_output;
+    TensorPtr<T> m_features;
+    TensorPtr<T> m_filter;
+    TensorPtr<T> m_bias;
+    TensorPtr<T> m_output;
 
     cudnnConvolutionDescriptor_t m_convDesc;
     cudnnConvolutionFwdAlgo_t m_convFwdAlg;

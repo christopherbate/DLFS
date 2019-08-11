@@ -10,18 +10,20 @@
 using namespace DLFS;
 using namespace std;
 
-Tensor::Tensor()
+template <typename T>
+Tensor<T>::Tensor() :
+    m_pitch{sizeof(T)}
 {
     m_bufferSize = 0;
     m_shape = {0, 0, 0, 0};
-    m_deviceBuffer = NULL;
-    m_pitch = 1;
+    m_deviceBuffer = NULL;    
     m_dataType = CUDNN_DATA_FLOAT;
     m_filterDesc = NULL;
     m_tensorDesc = NULL;
 }
 
-Tensor::~Tensor()
+template <typename T>
+Tensor<T>::~Tensor()
 {
     Deallocate();
     if (m_filterDesc)
@@ -30,14 +32,16 @@ Tensor::~Tensor()
         cudnnDestroyTensorDescriptor(m_tensorDesc);
 }
 
-void Tensor::SetShape(TensorShape shape)
+template <typename T>
+void Tensor<T>::SetShape(TensorShape shape)
 {
     m_isFilter = false;
     m_shape = shape;
     FillCUDNNDesc();
 }
 
-void Tensor::SetShape(int b, int h, int w, int c)
+template <typename T>
+void Tensor<T>::SetShape(int b, int h, int w, int c)
 {
     m_isFilter = false;
     m_shape = std::array<int, 4>{b, h, w, c};
@@ -49,7 +53,8 @@ void Tensor::SetShape(int b, int h, int w, int c)
  * which means the filters take the form of 
  * KRSC (output, rows, cols, input)
  * **/
-void Tensor::SetFilterShape(int numInputChn,
+template <typename T>
+void Tensor<T>::SetFilterShape(int numInputChn,
                             int numOutputChn,
                             int rows, int cols)
 {
@@ -62,7 +67,8 @@ void Tensor::SetFilterShape(int numInputChn,
  * Sets up the tensor descriptor for CUDNN. Must be called after
  * the shape of the tensor changes.
  */
-void Tensor::FillCUDNNDesc()
+template <typename T>
+void Tensor<T>::FillCUDNNDesc()
 {
     if (m_isFilter)
     {
@@ -81,7 +87,8 @@ void Tensor::FillCUDNNDesc()
     }
 }
 
-void Tensor::AllocateIfNecessary()
+template <typename T>
+void Tensor<T>::AllocateIfNecessary()
 {
     size_t needed_bytes = GetExpectedSize();
     if (needed_bytes > m_bufferSize || m_deviceBuffer == NULL)
@@ -91,41 +98,45 @@ void Tensor::AllocateIfNecessary()
     }
 }
 
-void Tensor::Allocate()
+template <typename T>
+void Tensor<T>::Allocate()
 {
     if (m_deviceBuffer != NULL)
     {
         Deallocate();
     }
+    cout << "Allocating tensor " << m_name << ":" << m_id << " " << (float)m_bufferSize/1024000.0 << " Mb"<< std::endl;
     checkCudaErrors(cudaMalloc(&m_deviceBuffer, m_bufferSize));
 }
 
-void Tensor::Deallocate()
+template <typename T>
+void Tensor<T>::Deallocate()
 {
     if (m_deviceBuffer != NULL)
     {
+        cout << "Attempting to deallocate Tensor " << m_name << ":" << m_id << endl;
         checkCudaErrors(cudaFree(m_deviceBuffer));
         m_deviceBuffer = NULL;
     }
 }
 
-TensorPtr Tensor::Convolve(std::shared_ptr<Tensor> filter)
+template <typename T>
+TensorPtr<T> Tensor<T>::Convolve(TensorPtr<T> filter)
 {
-    shared_ptr<Convolution> convOp = make_shared<Convolution>();
+    shared_ptr<Convolution<T>> convOp = make_shared<Convolution<T>>();
     convOp->SetFilter(filter);
-    convOp->SetFeatures(shared_from_this());
+    convOp->SetFeatures(this->shared_from_this());
 
-    TensorPtr outputTensor = make_shared<Tensor>();
-    const TensorShape &filterShape = filter->GetShape();
-
-    outputTensor->SetShape(m_shape[0], m_shape[1], m_shape[2], filterShape[0]);
+    // Create the output tensor.
+    TensorShape outputShape = convOp->Prepare();
+    TensorPtr<T> outputTensor = ADContext.CreateTensor<T>();    
+    outputTensor->SetName("ConvOutput");
+    outputTensor->SetShape(outputShape);
     outputTensor->AllocateIfNecessary();
-
+    
     convOp->SetOutput(outputTensor);
 
-    convOp->Prepare();
-
-    cout << "Conv op prepared." << endl;
+    cout << "Conv op prepared, output shape: " << outputTensor->PrintShape() <<  endl;
 
     convOp->Execute();
 
@@ -135,3 +146,6 @@ TensorPtr Tensor::Convolve(std::shared_ptr<Tensor> filter)
 
     return outputTensor;
 }
+
+template class Tensor<float>;
+template class Tensor<uint8_t>;

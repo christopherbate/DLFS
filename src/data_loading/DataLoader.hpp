@@ -16,7 +16,7 @@
 namespace DLFS
 {
 
-typedef std::tuple<Tensor, Tensor, Tensor> ObjDetExampleBatch;
+typedef std::tuple<Tensor<uint8_t>, Tensor<float>, Tensor<float>> ObjDetExampleBatch;
 typedef std::array<float, 4> BBoxArray;
 
 class DataLoader

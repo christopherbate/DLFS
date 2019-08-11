@@ -15,10 +15,18 @@ namespace DLFS
 
 typedef std::array<int, 4> TensorShape;
 
+class TensorBase
+{
+public:
+     virtual void SetShape(TensorShape shape) = 0;
+     virtual void SetId(uint32_t id) = 0;
+};
+
 /**
  * Tensor represents an array of 16-bit floating point numbers
  */
-class Tensor : public std::enable_shared_from_this<Tensor>
+template<typename T>
+class Tensor : public TensorBase, public std::enable_shared_from_this<Tensor<T>>
 {
 public:
     Tensor();
@@ -33,14 +41,10 @@ public:
 
     void AllocateIfNecessary();
 
-  
+    /*Initialization Functions*/
+    void SetToConstant(float constVal);
 
-    std::shared_ptr<Tensor> Convolve(std::shared_ptr<Tensor> filter);
-
-    inline void SetPitch(size_t pitch)
-    {
-        m_pitch = pitch;
-    }
+    std::shared_ptr<Tensor<T>> Convolve(std::shared_ptr<Tensor<T>> filter);    
 
     inline std::vector<unsigned char *> GetIterablePointersOverBatch()
     {
@@ -92,6 +96,20 @@ public:
         return shapeMsg;
     }
 
+    inline void SetId(uint32_t id)
+    {
+        m_id = id;
+    }
+
+    inline void SetName(const std::string &name)
+    {
+        m_name = name;
+    }
+
+    inline size_t GetPitch(){
+        return m_pitch;
+    }
+
 private:
     void Allocate();
     void Deallocate();
@@ -103,10 +121,13 @@ private:
     cudnnFilterDescriptor_t m_filterDesc;
     size_t m_bufferSize;
     uint8_t *m_deviceBuffer;
-    size_t m_pitch;
+    size_t m_pitch{sizeof(T)};
     bool m_isFilter;
+    std::string m_name{"UnnamedTensor"};
+    uint32_t m_id{0};
 };
 
-typedef std::shared_ptr<Tensor> TensorPtr;
+template <typename T>
+using TensorPtr = std::shared_ptr<Tensor<T>>;
 
 } // namespace DLFS

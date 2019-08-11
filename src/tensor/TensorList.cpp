@@ -4,31 +4,37 @@
 using namespace DLFS;
 using namespace std;
 
-TensorList::TensorList(int listSize) : m_listSize(listSize)
+template <typename T>
+TensorList<T>::TensorList(int listSize) : m_listSize(listSize)
 {
     m_tensors.resize(m_listSize);
 }
 
-TensorList::~TensorList()
+template <typename T>
+TensorList<T>::~TensorList()
 {
 }
 
-void TensorList::SetTensorShape(unsigned int idx, TensorShape &shape)
+template <typename T>
+void TensorList<T>::SetTensorShape(unsigned int idx, TensorShape &shape)
 {
     m_tensors[idx].SetShape(shape);
 }
 
-Tensor &TensorList::GetMutableTensor(unsigned int idx)
+template <typename T>
+Tensor<T> &TensorList<T>::GetMutableTensor(unsigned int idx)
 {
     return m_tensors[idx];
 }
 
-const Tensor &TensorList::GetTensor(unsigned int idx)
+template <typename T>
+const Tensor<T> &TensorList<T>::GetTensor(unsigned int idx)
 {
     return m_tensors[idx];
 }
 
-TensorShape TensorList::FindMaxDims()
+template <typename T>
+TensorShape TensorList<T>::FindMaxDims()
 {
     TensorShape maxDims = {1, 1, 1, 1};
     for (auto &tensor : m_tensors)
@@ -40,7 +46,8 @@ TensorShape TensorList::FindMaxDims()
     return maxDims;
 }
 
-std::vector<Tensor> &TensorList::GetMutableIterable()
+template <typename T>
+std::vector<Tensor<T>> &TensorList<T>::GetMutableIterable()
 {
     return m_tensors;
 }

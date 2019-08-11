@@ -28,7 +28,7 @@ public:
     ~ImageLoader();
 
     std::vector<ImageInfo> DecodeJPEG(const std::vector<std::vector<uint8_t>> &buffer,
-                                      Tensor &imgBatchTensor);
+                                      Tensor<uint8_t> &imgBatchTensor);
 
     void WriteBatchBMP();
 
@@ -36,7 +36,7 @@ public:
 
     void GetJPEGInfo(const std::vector<std::vector<uint8_t>> &dataBuffers, std::vector<ImageInfo> &imgInfoBufs);
 
-    void AllocateBuffers(std::vector<ImageInfo> &imgInfo, Tensor &tenso);
+    void AllocateBuffers(std::vector<ImageInfo> &imgInfo, Tensor<uint8_t> &tensor);
 
 private:
     nvjpegHandle_t m_jpegHandle;

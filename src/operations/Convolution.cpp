@@ -7,7 +7,8 @@
 using namespace DLFS;
 using namespace std;
 
-Convolution::Convolution()
+template <typename T>
+Convolution<T>::Convolution()
     : m_features(nullptr),
       m_filter(nullptr),
       m_bias(nullptr),
@@ -15,10 +16,11 @@ Convolution::Convolution()
 {
     Reset();
     m_strides = {1, 1};
-    m_padding = {1, 1};    
+    m_padding = {1, 1};
 }
 
-Convolution::Convolution(std::array<int, 2> padding, std::array<int, 2> stride)
+template <typename T>
+Convolution<T>::Convolution(std::array<int, 2> padding, std::array<int, 2> stride)
     : m_features(nullptr),
       m_filter(nullptr),
       m_bias(nullptr),
@@ -26,10 +28,11 @@ Convolution::Convolution(std::array<int, 2> padding, std::array<int, 2> stride)
 {
     Reset();
     m_strides = stride;
-    m_padding = padding;    
+    m_padding = padding;
 }
 
-void Convolution::Reset()
+template <typename T>
+void Convolution<T>::Reset()
 {
     checkCudaErrors(cudnnCreateConvolutionDescriptor(&m_convDesc));
     m_convFwdAlg = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
@@ -38,12 +41,14 @@ void Convolution::Reset()
     m_workspaceBuffer = NULL;
 }
 
-Convolution::~Convolution()
+template <typename T>
+Convolution<T>::~Convolution()
 {
     checkCudaErrors(cudnnDestroyConvolutionDescriptor(m_convDesc));
 }
 
-TensorShape Convolution::Prepare()
+template <typename T>
+TensorShape Convolution<T>::Prepare()
 {
     assert(m_features != nullptr);
     assert(m_filter != nullptr);
@@ -56,18 +61,19 @@ TensorShape Convolution::Prepare()
     TensorShape outputDims;
     checkCudaErrors(cudnnGetConvolution2dForwardOutputDim(m_convDesc, m_features->GetTensorDesc(),
                                                           m_filter->GetFilterDesc(), &outputDims[0],
-                                                          &outputDims[1], &outputDims[2], &outputDims[3]));
+                                                          &outputDims[3], &outputDims[1], &outputDims[2]));
     return outputDims;
 }
 
-void Convolution::Execute()
+template <typename T>
+void Convolution<T>::Execute()
 {
     assert(m_output != nullptr);
-    assert(m_features->GetPointer() != nullptr);
-    assert(m_filter->GetPointer() != nullptr);    
     assert(m_workspaceBuffer == NULL);
     assert(m_workspaceSize == 0);
-    assert(m_output->GetPointer() != NULL);
+    assert(m_features->GetPointer() != nullptr);
+    assert(m_filter->GetPointer() != nullptr);
+    assert(m_output->GetPointer() != nullptr);
 
     size_t wsSize = 0;
 
@@ -76,7 +82,7 @@ void Convolution::Execute()
                                             m_features->GetTensorDesc(), m_filter->GetFilterDesc(),
                                             m_convDesc, m_output->GetTensorDesc(), m_convFwdAlg, &wsSize);
 
-    cout << "Alg PRECOMP GEMM needs " << wsSize << " bytes of GPU workspace." << endl;
+    cout << "Alg PRECOMP GEMM needs " << (float)wsSize/1024000.0 << " Mb of GPU workspace." << endl;
 
     unsigned char *devWs = NULL;
     if (wsSize > 0)
@@ -90,4 +96,10 @@ void Convolution::Execute()
                                             m_output->GetTensorDesc(), m_output->GetPointer()));
     if (wsSize > 0)
         checkCudaErrors(cudaFree(devWs));
+        
+    cudaDeviceSynchronize();
+    std::cout << "Convolution executed." << std::endl;
 }
+
+template class Convolution<float>;
+template class Convolution<uint8_t>;

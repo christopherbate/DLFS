@@ -62,7 +62,7 @@ void ImageLoader::GetJPEGInfo(const vector<std::vector<uint8_t>> &dataBuffers,
  * Currently, we have fixed our output format to be RGBi for output to a NHWC tensor, 
  * which is used for tensor cores.
  */
-void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, Tensor &tensor)
+void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, Tensor<uint8_t> &tensor)
 {
 	unsigned int idx = 0;
 
@@ -96,7 +96,7 @@ void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, Tensor &tens
  * Outputs:
  * 	Pointer to CUDA memory structs
  */
-std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &buffers, Tensor &imgBatchTensor)
+std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &buffers, Tensor<uint8_t> &imgBatchTensor)
 {
 	std::vector<size_t> imgLengths;
 	std::vector<ImageInfo> imgInfoBufs(buffers.size());
