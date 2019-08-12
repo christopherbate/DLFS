@@ -106,7 +106,7 @@ void Convolution<T>::ExecuteForward()
 }
 
 template <typename T>
-void Convolution<T>::ExecuteBackward(TensorPtr<T> dy)
+void Convolution<T>::ExecuteBackward()
 {
     assert(m_features->GetPointer() != nullptr);
     assert(m_filter->GetPointer() != nullptr);
@@ -116,7 +116,7 @@ void Convolution<T>::ExecuteBackward(TensorPtr<T> dy)
     // TODO: this should only be done when dimensions / algorithm change.
     cudnnGetConvolutionBackwardFilterWorkspaceSize(GPUContext.GetCUDNNHandle(),
                                                    m_features->GetTensorDesc(),
-                                                   dy->GetTensorDesc(),
+                                                   m_output->GetTensorDesc(),
                                                    m_convDesc,
                                                    m_filter->GetGradFilterDesc(),
                                                    m_convBwdAlg,
@@ -131,8 +131,8 @@ void Convolution<T>::ExecuteBackward(TensorPtr<T> dy)
 
     checkCudaErrors(cudnnConvolutionBackwardFilter(GPUContext.GetCUDNNHandle(), &m_scaling[0],
                                                    m_features->GetTensorDesc(), m_features->GetPointer(),
-                                                   dy->GetTensorDesc(),
-                                                   dy->GetPointer(),
+                                                   m_output->GetTensorDesc(),
+                                                   m_output->GetGradPointer(),
                                                    m_convDesc, m_convBwdAlg, devWs,
                                                    wsSize, &m_scaling[1],
                                                    m_filter->GetGradFilterDesc(),

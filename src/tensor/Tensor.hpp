@@ -9,6 +9,7 @@
 #include <cuda_runtime.h>
 #include <cudnn.h>
 
+#include "operations/OpsCommon.hpp"
 #include "../Logging.hpp"
 
 namespace DLFS
@@ -48,8 +49,18 @@ private:
 
 using TensorBasePtr = std::shared_ptr<TensorBase>;
 
+/*
+ Fwd Declare so we can use the Tensor Ptr type in the 
+class decl. 
+*/
+template <typename T>
+class Tensor;
+
+template <typename T>
+using TensorPtr = std::shared_ptr<Tensor<T>>;
+
 /**
- * Tensor represents an array of 16-bit floating point numbers
+ * Tensor represents an array of double/float/half/int numbers.
  */
 template <typename T>
 class Tensor : public TensorBase, public std::enable_shared_from_this<Tensor<T>>
@@ -76,22 +87,25 @@ public:
     {
         assert(m_deviceBuffer != nullptr);
 
-        std::vector<T> localBuffer(GetLinearSize(), constVal);        
+        std::vector<T> localBuffer(GetLinearSize(), constVal);
         checkCudaErrors(cudaMemcpy(m_deviceBuffer, localBuffer.data(),
                                    localBuffer.size() * sizeof(T),
                                    cudaMemcpyHostToDevice));
     }
 
+    /* Fill gradient buffer with constant value */
     void FillConstantGrad(T constVal)
     {
         assert(m_deviceBufferGrad != nullptr);
-        std::vector<T> localBuffer(GetLinearSize(), constVal);        
+        std::vector<T> localBuffer(GetLinearSize(), constVal);
         checkCudaErrors(cudaMemcpy(m_deviceBufferGrad, localBuffer.data(),
                                    localBuffer.size() * sizeof(T),
                                    cudaMemcpyHostToDevice));
     }
 
-    std::shared_ptr<Tensor<T>> Convolve(std::shared_ptr<Tensor<T>> filter);
+    /* Fill buffer with constant value */
+    TensorPtr<T> Convolve(TensorPtr<T> filter, Pad2d padding = {1, 1},
+                          Stride2d = {1, 1});
 
     inline std::vector<unsigned char *> GetIterablePointersOverBatch()
     {
@@ -163,14 +177,30 @@ public:
         m_calcGrad = shouldCalcGrad;
     }
 
+    inline bool GetGradFlag()
+    {
+        return m_calcGrad;
+    }
+
     inline uint8_t *GetGradPointer()
     {
         return m_deviceBufferGrad;
     }
 
+    inline void InitGradChain()
+    {
+        assert(m_deviceBuffer != nullptr);
+
+        if(m_deviceBufferGrad){
+            checkCudaErrors(cudaFree(m_deviceBufferGrad));            
+        }
+        m_deviceBufferGrad = m_deviceBuffer;
+    }
+    
     void CopyBufferToHost(std::vector<T> &dst)
     {
-        if(dst.size() != GetLinearSize()){
+        if (dst.size() != GetLinearSize())
+        {
             dst.resize(GetLinearSize());
         }
         cudaMemcpy(dst.data(), m_deviceBuffer,
@@ -180,7 +210,8 @@ public:
 
     void CopyGradBufferToHost(std::vector<T> &dst)
     {
-        if(dst.size() != GetLinearSize()){
+        if (dst.size() != GetLinearSize())
+        {
             dst.resize(GetLinearSize());
         }
         cudaMemcpy(dst.data(), m_deviceBufferGrad,
@@ -212,8 +243,5 @@ private:
     void Allocate();
     void Deallocate();
 };
-
-template <typename T>
-using TensorPtr = std::shared_ptr<Tensor<T>>;
 
 } // namespace DLFS

@@ -88,6 +88,7 @@ void TestConv()
 
             TensorPtr<float> output = std::make_shared<Tensor<float>>();
             output->SetName("output");
+            output->SetGradFlag(true);            
 
             shared_ptr<Convolution<float>> convOp =
                 make_shared<Convolution<float>>(Pad2d({0, 0}),
@@ -99,6 +100,7 @@ void TestConv()
             auto outputShape = convOp->Prepare();
             output->SetShape(outputShape);
             output->AllocateIfNecessary();
+            output->FillConstantGrad(0.0);
 
             convOp->ExecuteForward();
 
@@ -115,7 +117,9 @@ void TestConv()
                 QTEqual(val, 0.0);
             }
 
-            convOp->ExecuteBackward(output);
+            output->InitGradChain();
+
+            convOp->ExecuteBackward();
 
             filter->CopyGradBufferToHost(resBuffer);
             QTEqual(resBuffer.size(), 16);

@@ -1,11 +1,11 @@
-#include "Tensor.hpp"
-#include "AutoDiff.hpp"
-
+#include <array>
 #include <iostream>
 #include <memory>
 #include <vector>
 
 #include "operations/Convolution.hpp"
+#include "Tensor.hpp"
+#include "AutoDiff.hpp"
 
 using namespace DLFS;
 using namespace std;
@@ -90,73 +90,85 @@ void Tensor<T>::FillCUDNNDesc()
         if (!m_tensorDesc)
             checkCudaErrors(cudnnCreateTensorDescriptor(&m_tensorDesc));
         checkCudaErrors(cudnnSetTensor4dDescriptor(m_tensorDesc, CUDNN_TENSOR_NHWC, m_dataType,
-                                                   m_shape[0], m_shape[3], m_shape[1], m_shape[2]));
+                                                   m_shape[0], m_shape[3], m_shape[1], m_shape[2]));       
     }
 }
 
 template <typename T>
 void Tensor<T>::AllocateIfNecessary()
 {
-    size_t needed_bytes = GetLinearSize()*sizeof(T);
+    size_t needed_bytes = GetLinearSize() * sizeof(T);
     bool needGradBuffer = m_calcGrad && m_deviceBufferGrad == nullptr;
     if (needed_bytes > m_bufferSize || m_deviceBuffer == nullptr || needGradBuffer)
-    {   
-        m_bufferSize = needed_bytes;     
-        Allocate();        
+    {
+        m_bufferSize = needed_bytes;
+        Allocate();
     }
 }
 
 template <typename T>
 void Tensor<T>::Allocate()
 {
-    if (m_deviceBuffer != nullptr || m_deviceBufferGrad != nullptr)    
-        Deallocate();    
+    if (m_deviceBuffer != nullptr || m_deviceBufferGrad != nullptr)
+        Deallocate();
 
-    cout << "Allocating tensor " << GetName() << ":" << GetId() << " " << (float)m_bufferSize / 1024000.0 << " Mb" << std::endl;
-    checkCudaErrors(cudaMalloc(&m_deviceBuffer, m_bufferSize));    
+    cout << "Allocating tensor " << GetName() << ":" << GetId()
+         << " " << (float)m_bufferSize / 1024000.0 << " Mb" << std::endl;
+    checkCudaErrors(cudaMalloc(&m_deviceBuffer, m_bufferSize));
 
-
-    if(m_calcGrad){
-        cout << "Allocating grad tensor " << GetName() << ":" << GetId() << " " << (float)m_bufferSize / 1024000.0 << " Mb" << std::endl;
+    if (m_calcGrad)
+    {
+        cout << "Allocating grad tensor " << GetName() << ":" << GetId()
+             << " " << (float)m_bufferSize / 1024000.0 << " Mb" << std::endl;
         checkCudaErrors(cudaMalloc(&m_deviceBufferGrad, m_bufferSize));
     }
 }
 
 template <typename T>
 void Tensor<T>::Deallocate()
-{
+{    
     if (m_deviceBuffer != nullptr)
     {
         cout << "Attempting to deallocate Tensor " << GetName() << ":" << GetId() << endl;
         checkCudaErrors(cudaFree(m_deviceBuffer));
+        if(m_deviceBufferGrad == m_deviceBuffer)
+            m_deviceBufferGrad = nullptr;        
         m_deviceBuffer = nullptr;
-        m_bufferSize = 0;        
+        m_bufferSize = 0;
     }
-    if(m_deviceBufferGrad != nullptr)
+    if (m_deviceBufferGrad != nullptr)
     {
         cout << "Attempting to deallocate grad Tensor " << GetName() << ":" << GetId() << endl;
         checkCudaErrors(cudaFree(m_deviceBufferGrad));
-        m_deviceBufferGrad = nullptr;        
+        m_deviceBufferGrad = nullptr;
     }
 }
 
 template <typename T>
-TensorPtr<T> Tensor<T>::Convolve(TensorPtr<T> filter)
+TensorPtr<T> Tensor<T>::Convolve(TensorPtr<T> filter,
+                                 Pad2d padding, Stride2d stride)
 {
-    shared_ptr<Convolution<T>> convOp = make_shared<Convolution<T>>();
+    shared_ptr<Convolution<T>> convOp =
+        make_shared<Convolution<T>>(padding, stride);
     convOp->SetFilter(filter);
     convOp->SetFeatures(this->shared_from_this());
 
     // Create the output tensor.
     TensorShape outputShape = convOp->Prepare();
     TensorPtr<T> outputTensor = ADContext.CreateTensor<T>();
+
+    // Put this variable into the active set if either inputs are active
+    if (filter->GetGradFlag() || GetGradFlag())
+        outputTensor->SetGradFlag(true);
+
     outputTensor->SetName("ConvOutput");
     outputTensor->SetShape(outputShape);
     outputTensor->AllocateIfNecessary();
 
     convOp->SetOutput(outputTensor);
 
-    cout << "Conv op prepared, output shape: " << outputTensor->PrintShape() << endl;
+    cout << "Conv op prepared, output shape: "
+         << outputTensor->PrintShape() << endl;
 
     convOp->ExecuteForward();
 
