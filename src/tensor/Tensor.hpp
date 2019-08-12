@@ -4,6 +4,7 @@
 #include <iostream>
 #include <memory>
 #include <vector>
+#include <cassert>
 
 #include <cuda_runtime.h>
 #include <cudnn.h>
@@ -18,14 +19,39 @@ typedef std::array<int, 4> TensorShape;
 class TensorBase
 {
 public:
-     virtual void SetShape(TensorShape shape) = 0;
-     virtual void SetId(uint32_t id) = 0;
+    virtual void SetShape(TensorShape shape) = 0;
+
+    inline std::string GetName()
+    {
+        return m_name;
+    }
+
+    inline void SetName(const std::string &name)
+    {
+        m_name = name;
+    }
+
+    inline void SetId(uint32_t id)
+    {
+        m_id = id;
+    }
+
+    inline uint32_t GetId()
+    {
+        return m_id;
+    }
+
+private:
+    uint32_t m_id{0};
+    std::string m_name{"UnnamedTensor"};
 };
+
+using TensorBasePtr = std::shared_ptr<TensorBase>;
 
 /**
  * Tensor represents an array of 16-bit floating point numbers
  */
-template<typename T>
+template <typename T>
 class Tensor : public TensorBase, public std::enable_shared_from_this<Tensor<T>>
 {
 public:
@@ -41,10 +67,31 @@ public:
 
     void AllocateIfNecessary();
 
-    /*Initialization Functions*/
-    void SetToConstant(float constVal);
+    /**
+    * Initialization Functions
+    */
 
-    std::shared_ptr<Tensor<T>> Convolve(std::shared_ptr<Tensor<T>> filter);    
+    /* Fill buffer with constant value */
+    void FillConstant(T constVal)
+    {
+        assert(m_deviceBuffer != nullptr);
+
+        std::vector<T> localBuffer(GetLinearSize(), constVal);        
+        checkCudaErrors(cudaMemcpy(m_deviceBuffer, localBuffer.data(),
+                                   localBuffer.size() * sizeof(T),
+                                   cudaMemcpyHostToDevice));
+    }
+
+    void FillConstantGrad(T constVal)
+    {
+        assert(m_deviceBufferGrad != nullptr);
+        std::vector<T> localBuffer(GetLinearSize(), constVal);        
+        checkCudaErrors(cudaMemcpy(m_deviceBufferGrad, localBuffer.data(),
+                                   localBuffer.size() * sizeof(T),
+                                   cudaMemcpyHostToDevice));
+    }
+
+    std::shared_ptr<Tensor<T>> Convolve(std::shared_ptr<Tensor<T>> filter);
 
     inline std::vector<unsigned char *> GetIterablePointersOverBatch()
     {
@@ -72,6 +119,11 @@ public:
         return (m_shape[0] * m_shape[1] * m_shape[2] * m_shape[3]) * m_pitch;
     }
 
+    inline size_t GetLinearSize()
+    {
+        return (m_shape[0] * m_shape[1] * m_shape[2] * m_shape[3]);
+    }
+
     inline size_t GetExpectedSizeWithinBatch()
     {
         return (m_shape[1] * m_shape[2] * m_shape[3]) * m_pitch;
@@ -96,35 +148,69 @@ public:
         return shapeMsg;
     }
 
-    inline void SetId(uint32_t id)
+    inline size_t GetPitch()
     {
-        m_id = id;
-    }
-
-    inline void SetName(const std::string &name)
-    {
-        m_name = name;
-    }
-
-    inline size_t GetPitch(){
         return m_pitch;
     }
+
+    inline cudnnFilterDescriptor_t GetGradFilterDesc()
+    {
+        return m_dwFilterDesc;
+    }
+
+    inline void SetGradFlag(bool shouldCalcGrad)
+    {
+        m_calcGrad = shouldCalcGrad;
+    }
+
+    inline uint8_t *GetGradPointer()
+    {
+        return m_deviceBufferGrad;
+    }
+
+    void CopyBufferToHost(std::vector<T> &dst)
+    {
+        if(dst.size() != GetLinearSize()){
+            dst.resize(GetLinearSize());
+        }
+        cudaMemcpy(dst.data(), m_deviceBuffer,
+                   GetLinearSize() * sizeof(T),
+                   cudaMemcpyDeviceToHost);
+    }
+
+    void CopyGradBufferToHost(std::vector<T> &dst)
+    {
+        if(dst.size() != GetLinearSize()){
+            dst.resize(GetLinearSize());
+        }
+        cudaMemcpy(dst.data(), m_deviceBufferGrad,
+                   GetLinearSize() * sizeof(T),
+                   cudaMemcpyDeviceToHost);
+    }
+
+private:
+    TensorShape m_shape;
+
+    cudnnDataType_t m_dataType;
+
+    cudnnTensorDescriptor_t m_tensorDesc{nullptr};
+
+    cudnnFilterDescriptor_t m_filterDesc{nullptr};
+    cudnnFilterDescriptor_t m_dwFilterDesc{nullptr};
+
+    size_t m_bufferSize{0};
+
+    uint8_t *m_deviceBuffer{nullptr};
+    uint8_t *m_deviceBufferGrad{nullptr};
+
+    size_t m_pitch{sizeof(T)};
+
+    bool m_isFilter{false};
+    bool m_calcGrad{false};
 
 private:
     void Allocate();
     void Deallocate();
-
-private:
-    TensorShape m_shape;
-    cudnnDataType_t m_dataType;
-    cudnnTensorDescriptor_t m_tensorDesc;
-    cudnnFilterDescriptor_t m_filterDesc;
-    size_t m_bufferSize;
-    uint8_t *m_deviceBuffer;
-    size_t m_pitch{sizeof(T)};
-    bool m_isFilter;
-    std::string m_name{"UnnamedTensor"};
-    uint32_t m_id{0};
 };
 
 template <typename T>
