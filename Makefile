@@ -28,7 +28,7 @@ DLFS_OBJS = .build/main.o $(NON_MAIN_OBJS)
 CONVERT_UTIL_OBJS = .build/utils/ConvertCoco.o $(NON_MAIN_OBJS)
 
 _TEST_OBJS = UnitTest.o TestTensor.o TestAutoDiff.o TestGPU.o TestDataLoader.o \
-			TestConv.o
+			TestConv.o TestTensorOp.o
 			
 UNIT_TEST_OBJS = $(addprefix $(OBJDIR)/tests/, $(_TEST_OBJS)) $(NON_MAIN_OBJS)
 

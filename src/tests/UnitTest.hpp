@@ -5,4 +5,4 @@ void TestAutoDiff();
 void TestGPU();
 void TestDataLoader();
 void TestConv();
-
+void TestTensorOp();

@@ -50,6 +50,7 @@ int main()
     TestTensor();
     TestAutoDiff();      
     TestConv();  
+    TestTensorOp();
 
     TestRunner::GetRunner()->Run();
     TestRunner::GetRunner()->PrintSummary();
