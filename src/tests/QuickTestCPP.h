@@ -10,9 +10,11 @@
 #ifndef CTB_TEST
 #define CTB_TEST
 #include <string>
+#include <sstream>
 #include <vector>
 #include <iostream>
 #include <unordered_map>
+#include <iomanip>
 
 /**
 black        30         40
@@ -37,6 +39,8 @@ const std::string GRN = "\033[32m";
 const std::string RST = "\033[0m";
 
 #define QTEqual(val1, val2) QuickTest::Equal(val1, val2, __FILE__, __LINE__)
+#define QTNotEqual(val1, val2) QuickTest::NotEqual(val1, val2, __FILE__, __LINE__)
+#define QTAlmostEqual(val1, val2, eps) QuickTest::AlmostEqual(val1, val2, eps, __FILE__, __LINE__)
 
 /**
  * Test Exception class
@@ -61,45 +65,62 @@ private:
 class QuickTest
 {
 public:
-    static void Equal(int a, int b)
+    template <typename T1, typename T2>
+    static void Equal(T1 a, T2 b)
     {
-        if (a != b)
+        T1 c = static_cast<T1>(b);
+        if (a != c)
         {
-            std::string msg = "NotEqual: " + std::to_string(a) + " != " + std::to_string(b);
-            throw QuickTestError(msg);
+            std::stringstream ss;
+            ss << "NotEqual: " << a << " != " << c;
+            throw QuickTestError(ss.str());
         }
     }
-    static void Equal(int a, int b, const char *file, const int line)
+
+    template <typename T1, typename T2>
+    static void Equal(T1 a, T2 b, const char *file, const int line)
     {
-        if (a != b)
+        std::cout.precision(3);
+        T1 c = static_cast<T1>(b);
+        if (a != c)
         {
-            std::string msg = "Test Failure at " + std::string{file} + ":" + std::to_string(line) +
-                              " NotEqual: " + std::to_string(a) + " != " + std::to_string(b);
-            throw QuickTestError(msg);
+            std::stringstream ss;
+            ss << "Test Failure at " << file << ":" << line
+               << " NotEqual: " << a << " != " << c;
+            throw QuickTestError(ss.str());
         }
     }
-    static void Equal(unsigned int a, unsigned int b)
-    {
-        if (a != b)
-        {
-            std::string msg = "NotEqual: " + std::to_string(a) + " != " + std::to_string(b);
-            throw QuickTestError(msg);
-        }
-    }
-    static void Equal(void *a, void *b)
-    {
-        if (a != b)
-        {
-            std::string msg = "NotEqual: " + std::to_string(uint64_t(a)) + " != " + std::to_string(uint64_t(b));
-            throw QuickTestError(msg);
-        }
-    }
+
     static void NotEqual(void *a, void *b)
     {
         if (a == b)
         {
             std::string msg = "Equal: " + std::to_string(uint64_t(a)) + " != " + std::to_string(uint64_t(b));
             throw QuickTestError(msg);
+        }
+    }
+
+    template <typename T1, typename T2>
+    static void NotEqual(T1 a, T2 b, const char *file, const int line)
+    {
+        T1 c = static_cast<T1>(b);
+        if (a == c)
+        {
+            std::stringstream ss;
+            ss << "Test Failure at " << file << ":" << line
+               << " Should not equal: " << a << " == " << c;
+            throw QuickTestError(ss.str());
+        }
+    }
+
+    static void AlmostEqual(float a, float b, float eps, const char *file, const int line)
+    {        
+        if (std::abs(a - b) > eps)
+        {
+            std::stringstream ss;
+            ss << "Test Failure at " << file << ":" << line
+               << "(AlmostEqual)" << (a-b) << " > " << eps;
+            throw QuickTestError(ss.str());
         }
     }
 };
