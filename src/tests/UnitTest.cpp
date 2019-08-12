@@ -48,7 +48,8 @@ int main()
     DefaultTests();
     TestGPU();
     TestTensor();
-    TestAutoDiff();        
+    TestAutoDiff();      
+    TestConv();  
 
     TestRunner::GetRunner()->Run();
     TestRunner::GetRunner()->PrintSummary();

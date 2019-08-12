@@ -11,17 +11,21 @@
 namespace DLFS
 {
 
-template<typename T>
+typedef std::array<int, 2> Pad2d;
+typedef std::array<int, 2> Stride2d;
+
+template <typename T>
 class Convolution : public TrackableOp
 {
 public:
     Convolution();
-    Convolution(std::array<int, 2> padding, std::array<int, 2> stride);
+    Convolution(Pad2d padding, Stride2d stride);
     ~Convolution();
 
     TensorShape Prepare();
 
-    void Execute();
+    void ExecuteForward();
+    void ExecuteBackward(TensorPtr<T> dy);
 
     inline void SetFilter(TensorPtr<T> p)
     {
@@ -38,6 +42,11 @@ public:
         m_output = p;
     }
 
+    TensorBasePtr GetOutputTensor()
+    {
+        return m_output;
+    }
+
 private:
     void Reset();
 
@@ -45,9 +54,11 @@ private:
     TensorPtr<T> m_filter;
     TensorPtr<T> m_bias;
     TensorPtr<T> m_output;
+    TensorPtr<T> m_dy{nullptr};
 
     cudnnConvolutionDescriptor_t m_convDesc;
     cudnnConvolutionFwdAlgo_t m_convFwdAlg;
+    cudnnConvolutionBwdFilterAlgo_t m_convBwdAlg;
 
     uint8_t *m_workspaceBuffer;
     size_t m_workspaceSize;
@@ -56,5 +67,8 @@ private:
     std::array<int, 2> m_strides;
     std::array<int, 2> m_padding;
 };
+
+template <typename T>
+using ConvOpPtr = std::shared_ptr<Convolution<T>>;
 
 } // namespace DLFS
