@@ -36,7 +36,7 @@ public:
     inline uint32_t GetId()
     {
         return m_id;
-    }    
+    }
 
 private:
     std::string m_name;
@@ -75,6 +75,39 @@ public:
         return p;
     }
 
+    template <typename T>
+    std::shared_ptr<Tensor<T>> CreateTensor(TensorShape shape, const std::string &name,
+                                            T constValueFill, bool grad = true)
+    {
+        TensorPtr<T> p = std::make_shared<Tensor<T>>();
+        p->SetGradFlag(grad);
+        p->SetShape(shape);
+        p->SetName(name);
+        p->AllocateIfNecessary();
+        p->FillConstant(constValueFill);
+        p->SetId(m_tensorTrace.size());
+
+        m_tensorTrace.emplace_back(p);
+        return p;
+    }
+
+    template <typename T>
+    std::shared_ptr<Tensor<T>> CreateFilter(int inChannel, int outChannel, int filterSize,
+                                            const std::string &name,
+                                            T constValueFill, bool grad = true)
+    {
+        TensorPtr<T> p = std::make_shared<Tensor<T>>();
+        p->SetGradFlag(grad);
+        p->SetFilterShape(inChannel, outChannel, filterSize, filterSize);
+        p->SetName(name);
+        p->AllocateIfNecessary();
+        p->FillConstant(constValueFill);
+        p->SetId(m_tensorTrace.size());
+
+        m_tensorTrace.emplace_back(p);
+        return p;
+    }
+
     void CalcGradient(TensorBasePtr scalarTensor,
                       std::vector<TensorBasePtr> parameters)
     {
@@ -85,15 +118,27 @@ public:
             std::cout << p->GetName() << ":" << p->GetId() << std::endl;
         }
 
+        // Initialize the backward operation. This operation sets up the
+        // gradient tensor at the top of the chain.
+        scalarTensor->InitGradChain();
+
+        // Cycle through the operations in reverse order.
         std::cout << "Operations: " << std::endl;
-        for (auto op : m_opTrace)
+        for (auto opIter = m_opTrace.rbegin(); opIter != m_opTrace.rend(); opIter++)
         {
+            auto op = *opIter;
             std::cout << op->GetName() << ":" << op->GetId() << std::endl;
-            if (op->GetOutputTensor() == scalarTensor)
+
+            // Skip this op if it's output hasn't seen a backward pass.
+            // this means that this op is somehow disconnected or upstream
+            // from scalarTensor
+            if (op->GetOutputTensor()->GetBackwardPasses() < 1)
             {
-                std::cout << "This op has the scalarTensor as output" << std::endl;
-                // op->ExecuteBackward(scalarTensor);
+                std::cout << "Skipping this op." << std::endl;
+                continue;
             }
+
+            op->ExecuteBackward();
         }
     }
 
