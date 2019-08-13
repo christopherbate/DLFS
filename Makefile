@@ -1,8 +1,10 @@
-HOST_COMPILER ?= g++
+# HOST_COMPILER ?= g++
 CUDA_PATH := /usr/local/cuda
 NVCC := $(CUDA_PATH)/bin/nvcc
 CXX := $(NVCC) 
 FLAT_C := flatc
+KERNEL_FLAGS := --gpu-architecture=compute_75 -lineinfo --compiler-options -Wall \
+				-I ./src/
 CXX_FLAGS := --compiler-options -Wall --compiler-options -Werror --compiler-options -MMD \
 			 --compiler-options -Wextra -I ./src/ --gpu-architecture=compute_75 -lineinfo 
 CUDA_OPTS=
@@ -17,10 +19,12 @@ DIRS := bin $(OBJDIR) $(OBJDIR)/data_loading $(OBJDIR)/tensor \
 		$(OBJDIR)/utils $(OBJDIR)/tests $(OBJDIR)/operations
 
 # Object definitions
-_NON_MAIN_OBJS = GPU.o tensor/Tensor.o data_loading/ImageLoader.o Logging.o \
+_NON_MAIN_OBJS =  operations/PointwiseKernels.o \
+				 GPU.o tensor/Tensor.o data_loading/ImageLoader.o Logging.o \
 			     data_loading/LocalSource.o data_loading/DataLoader.o \
 				 data_loading/ExampleSource.o  tensor/TensorList.o \
-				 operations/Convolution.o tensor/AutoDiff.o 
+				 operations/Convolution.o tensor/AutoDiff.o \
+				
 
 NON_MAIN_OBJS = $(addprefix $(OBJDIR)/, $(_NON_MAIN_OBJS))
 
@@ -37,6 +41,9 @@ ALL_OBJS = $(DLFS_OBJS) $(CONVERT_UTIL_OBJS) $(UNIT_TEST_OBJS)
 EXECUTABLES := DLFS utils tests
 
 DEPS = $(ALL_OBJS:.o=.d)
+
+$(OBJDIR)/%.o: src/%.cu
+	$(NVCC) $(KERNEL_FLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: src/%.cpp
 	$(CXX) $(CXX_FLAGS) -c $< -o $@
