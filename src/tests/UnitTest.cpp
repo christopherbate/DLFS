@@ -5,6 +5,7 @@
 #include <string>
 
 using namespace std;
+using namespace DLFS;
 
 void DefaultTests()
 {
@@ -45,6 +46,8 @@ void DefaultTests()
 
 int main()
 {
+    LOG.SetMinLevel(Warn);
+    
     DefaultTests();
     TestGPU();
     TestTensor();
