@@ -1,6 +1,6 @@
 #include "../data_loading/DataSource.hpp"
 #include "../data_loading/dataset_generated.h"
-#include "json.hpp"
+#include "external/json.hpp"
 
 #include <string>
 #include <iostream>
