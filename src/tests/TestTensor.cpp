@@ -130,4 +130,58 @@ void TestTensor()
                 QTEqual(v, 0.1);
             }
         });
+
+    TestRunner::GetRunner()->AddTest(
+        "Tensor",
+        "Power operator overloading",
+        []() {
+            ADContext.Reset();
+
+            TensorPtr<float> features = std::make_shared<Tensor<float>>();
+            features->SetGradFlag(true);
+            features->SetShape(1, 12, 12, 3);            
+            features->SetName("features");
+            features->AllocateIfNecessary();
+            features->FillConstant(3.0);
+            features->FillConstantGrad(0.0);
+
+            TensorPtr<float> out = features^2.0f;
+
+            vector<float> buffer;
+            out->CopyBufferToHost(buffer);
+            for(auto v : buffer){
+                QTEqual(v, 9.0);
+            }
+        });
+
+    
+    TestRunner::GetRunner()->AddTest(
+        "Tensor",
+        "Conv,operator+ overload combination",
+        []() {
+            ADContext.Reset();
+
+            TensorPtr<float> features =
+                ADContext.CreateTensor<float>({1, 64, 64, 3},
+                                              "features", 2.0, false);
+
+            TensorPtr<float> filter =
+                ADContext.CreateFilter<float>(3, 1, 3,
+                                              "filter", 1.0, true);
+
+            TensorPtr<float> bias =
+                ADContext.CreateTensor<float>({1, 62, 62, 1},
+                                              "bias", 3.0, true);
+            
+            TensorPtr<float> result = features->Convolve(filter, {0, 0}, {1, 1})+bias;
+
+            cout << bias->PrintShape() << " " << result->PrintShape() << endl;            
+
+            vector<float> buffer;
+            result->CopyBufferToHost(buffer);
+            QTEqual(buffer.size(), 62*62);
+            for(auto v:buffer){
+                QTEqual(v, 54.0f+3.0);
+            }            
+        });
 }
