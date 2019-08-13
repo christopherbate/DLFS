@@ -1,9 +1,11 @@
 #include <array>
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <vector>
 
 #include "operations/Convolution.hpp"
+#include "operations/TensorOp.hpp"
 #include "Tensor.hpp"
 #include "AutoDiff.hpp"
 
@@ -75,7 +77,7 @@ void Tensor<T>::FillCUDNNDesc()
                                                    CUDNN_TENSOR_NHWC, m_shape[0], m_shape[3],
                                                    m_shape[1], m_shape[2]));
 
-        if (m_calcGrad)
+        if (GetGradFlag())
         {
             if (!m_dwFilterDesc)
                 checkCudaErrors(cudnnCreateFilterDescriptor(&m_dwFilterDesc));
@@ -98,7 +100,7 @@ template <typename T>
 void Tensor<T>::AllocateIfNecessary()
 {
     size_t needed_bytes = GetLinearSize() * sizeof(T);
-    bool needGradBuffer = m_calcGrad && m_deviceBufferGrad == nullptr;
+    bool needGradBuffer = GetGradFlag() && m_deviceBufferGrad == nullptr;
     if (needed_bytes > m_bufferSize || m_deviceBuffer == nullptr || needGradBuffer)
     {
         m_bufferSize = needed_bytes;
@@ -112,14 +114,14 @@ void Tensor<T>::Allocate()
     if (m_deviceBuffer != nullptr || m_deviceBufferGrad != nullptr)
         Deallocate();
 
-    cout << "Allocating tensor " << GetName() << ":" << GetId()
-         << " " << (float)m_bufferSize / 1024000.0 << " Mb" << std::endl;
+    LOG.DEBUG() << "Allocating tensor " << GetName() << ":" << GetId()
+         << " " << (float)m_bufferSize / 1024000.0 << " Mb";
     checkCudaErrors(cudaMalloc(&m_deviceBuffer, m_bufferSize));
 
-    if (m_calcGrad)
+    if (GetGradFlag())
     {
-        cout << "Allocating grad tensor " << GetName() << ":" << GetId()
-             << " " << (float)m_bufferSize / 1024000.0 << " Mb" << std::endl;
+        LOG.DEBUG() << "Allocating grad tensor " << GetName() << ":" << GetId()
+             << " " << (float)m_bufferSize / 1024000.0 << " Mb";
         checkCudaErrors(cudaMalloc(&m_deviceBufferGrad, m_bufferSize));
     }
 }
@@ -129,7 +131,7 @@ void Tensor<T>::Deallocate()
 {    
     if (m_deviceBuffer != nullptr)
     {
-        cout << "Attempting to deallocate Tensor " << GetName() << ":" << GetId() << endl;
+        LOG.DEBUG() << "Attempting to deallocate Tensor " << GetName() << ":" << GetId();
         checkCudaErrors(cudaFree(m_deviceBuffer));
         if(m_deviceBufferGrad == m_deviceBuffer)
             m_deviceBufferGrad = nullptr;        
@@ -138,7 +140,7 @@ void Tensor<T>::Deallocate()
     }
     if (m_deviceBufferGrad != nullptr)
     {
-        cout << "Attempting to deallocate grad Tensor " << GetName() << ":" << GetId() << endl;
+        LOG.DEBUG() << "Attempting to deallocate grad Tensor " << GetName() << ":" << GetId();
         checkCudaErrors(cudaFree(m_deviceBufferGrad));
         m_deviceBufferGrad = nullptr;
     }
@@ -167,14 +169,66 @@ TensorPtr<T> Tensor<T>::Convolve(TensorPtr<T> filter,
 
     convOp->SetOutput(outputTensor);
 
-    cout << "Conv op prepared, output shape: "
-         << outputTensor->PrintShape() << endl;
+    LOG << "Conv op prepared, output shape: "
+         << outputTensor->PrintShape();
 
     convOp->ExecuteForward();
 
-    cout << "Executed " << endl;
+    LOG << "Executed ";
 
     ADContext.AddOp(convOp);
+
+    return outputTensor;
+}
+
+template <typename T>
+TensorPtr<T> Tensor<T>::Add(TensorPtr<T> rhs)
+{
+     shared_ptr<TensorOp<T>> addOp =
+        make_shared<TensorOp<T>>(PW_ADD);
+
+    addOp->SetName("AddOp");
+    addOp->SetInput(this->shared_from_this(), 0);
+    addOp->SetInput(rhs, 1);
+
+    TensorPtr<T> outputTensor = ADContext.CreateTensor<T>();     
+    if (rhs->GetGradFlag() || GetGradFlag())
+        outputTensor->SetGradFlag(true);
+    outputTensor->SetShape(GetShape());
+    outputTensor->SetName("AddOutput");
+    outputTensor->AllocateIfNecessary();
+
+    addOp->SetOutput(outputTensor);
+
+    addOp->ExecuteForward();
+
+    ADContext.AddOp(addOp);
+
+    return outputTensor;
+}
+
+template <typename T>
+TensorPtr<T> Tensor<T>::Power(T scalar)
+{
+     shared_ptr<TensorOp<T>> powOp =
+        make_shared<TensorOp<T>>(PW_POW);
+
+    powOp->SetName("PowerOp");
+    powOp->SetInput(this->shared_from_this(), 0);
+    powOp->SetPower(scalar);
+
+    TensorPtr<T> outputTensor = ADContext.CreateTensor<T>();     
+    if (GetGradFlag())
+        outputTensor->SetGradFlag(true);
+    outputTensor->SetShape(GetShape());
+    outputTensor->SetName("PowerOutput");
+    outputTensor->AllocateIfNecessary();
+
+    powOp->SetOutput(outputTensor);
+
+    powOp->ExecuteForward();
+
+    ADContext.AddOp(powOp);
 
     return outputTensor;
 }

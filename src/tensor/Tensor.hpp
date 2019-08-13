@@ -21,6 +21,7 @@ class TensorBase
 {
 public:
     virtual void SetShape(TensorShape shape) = 0;
+    virtual void InitGradChain() = 0;
 
     inline std::string GetName()
     {
@@ -42,9 +43,44 @@ public:
         return m_id;
     }
 
+    inline void SetGradFlag(bool shouldCalcGrad)
+    {
+        m_calcGrad = shouldCalcGrad;
+    }
+
+    inline bool GetGradFlag()
+    {
+        return m_calcGrad;
+    }
+
+    inline void ResetBackwardPasses()
+    {
+        m_numBackPasses = 0;
+    }
+
+    inline uint32_t GetBackwardPasses()
+    {
+        return m_numBackPasses;
+    }
+
+    inline bool IsFirstBackwardPass()
+    {
+        return m_numBackPasses == 0;
+    }
+
+    inline void IncrementBackwardPass()
+    {
+        m_numBackPasses++;
+    }
+
 private:
+    bool m_calcGrad{false};
     uint32_t m_id{0};
     std::string m_name{"UnnamedTensor"};
+
+    /* How many times this tensor was seen as 
+       an input into an op during backward pass */
+    uint32_t m_numBackPasses{0};
 };
 
 using TensorBasePtr = std::shared_ptr<TensorBase>;
@@ -102,10 +138,6 @@ public:
                                    localBuffer.size() * sizeof(T),
                                    cudaMemcpyHostToDevice));
     }
-
-    /* Fill buffer with constant value */
-    TensorPtr<T> Convolve(TensorPtr<T> filter, Pad2d padding = {1, 1},
-                          Stride2d = {1, 1});
 
     inline std::vector<unsigned char *> GetIterablePointersOverBatch()
     {
@@ -172,16 +204,6 @@ public:
         return m_dwFilterDesc;
     }
 
-    inline void SetGradFlag(bool shouldCalcGrad)
-    {
-        m_calcGrad = shouldCalcGrad;
-    }
-
-    inline bool GetGradFlag()
-    {
-        return m_calcGrad;
-    }
-
     inline uint8_t *GetGradPointer()
     {
         return m_deviceBufferGrad;
@@ -191,12 +213,16 @@ public:
     {
         assert(m_deviceBuffer != nullptr);
 
-        if(m_deviceBufferGrad){
-            checkCudaErrors(cudaFree(m_deviceBufferGrad));            
-        }
-        m_deviceBufferGrad = m_deviceBuffer;
+        // if (m_deviceBufferGrad)
+        // {
+        //     checkCudaErrors(cudaFree(m_deviceBufferGrad));
+        // }
+        // m_deviceBufferGrad = m_deviceBuffer;
+        FillConstantGrad(1.0f);
+        ResetBackwardPasses();
+        IncrementBackwardPass();
     }
-    
+
     void CopyBufferToHost(std::vector<T> &dst)
     {
         if (dst.size() != GetLinearSize())
@@ -219,6 +245,29 @@ public:
                    cudaMemcpyDeviceToHost);
     }
 
+    /** 
+     * Overloaded and custom Tensor Operations for Autodiff functionality
+     */
+    /* Fill buffer with constant value */
+    TensorPtr<T> Convolve(TensorPtr<T> filter, Pad2d padding = {1, 1},
+                          Stride2d = {1, 1});
+    TensorPtr<T> Add(TensorPtr<T> rhs);
+    TensorPtr<T> Power(T scalar);
+
+    friend TensorPtr<T> operator+(const TensorPtr<T> &lhs,
+                                  const TensorPtr<T> &rhs)
+    {
+        TensorPtr<T> out = lhs->Add(rhs);
+        return out;
+    }
+
+    friend TensorPtr<T> operator^(TensorPtr<T> lhs,
+                                  const T &rhs)
+    {
+        TensorPtr<T> out = lhs->Power(rhs);
+        return out;
+    }
+
 private:
     TensorShape m_shape;
 
@@ -237,7 +286,6 @@ private:
     size_t m_pitch{sizeof(T)};
 
     bool m_isFilter{false};
-    bool m_calcGrad{false};
 
 private:
     void Allocate();
