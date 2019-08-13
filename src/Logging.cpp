@@ -1,6 +1,7 @@
 #include "Logging.hpp"
-
 #include <nvjpeg.h>
+
+DLFS::LoggingUtility DLFS::LOG;
 
 const char *cudaGetErrorName(nvjpegStatus_t error) {
   switch (error) {
