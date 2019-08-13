@@ -56,8 +56,18 @@ private:
     TensorPtr<T> m_dy{nullptr};
 
     cudnnConvolutionDescriptor_t m_convDesc;
+
+    /**
+     * These variables encode the specific
+     * algorithm used by cudnn functions.
+     * Each algorithm also might induce different kernels
+     * depending on the compute capability and size of 
+     * the tensors. Right now we have the algs fixed,
+     * but in the future these should be selected dynamically.
+     */    
     cudnnConvolutionFwdAlgo_t m_convFwdAlg;
-    cudnnConvolutionBwdFilterAlgo_t m_convBwdAlg;
+    cudnnConvolutionBwdFilterAlgo_t m_convBwdFilterAlg;
+    cudnnConvolutionBwdDataAlgo_t m_convBwdDataAlg;
 
     uint8_t *m_workspaceBuffer;
     size_t m_workspaceSize;

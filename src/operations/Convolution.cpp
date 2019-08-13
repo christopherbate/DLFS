@@ -37,7 +37,8 @@ void Convolution<T>::Reset()
 {
     checkCudaErrors(cudnnCreateConvolutionDescriptor(&m_convDesc));
     m_convFwdAlg = CUDNN_CONVOLUTION_FWD_ALGO_IMPLICIT_PRECOMP_GEMM;
-    m_convBwdAlg = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0;
+    m_convBwdFilterAlg = CUDNN_CONVOLUTION_BWD_FILTER_ALGO_0;
+    m_convBwdDataAlg = CUDNN_CONVOLUTION_BWD_DATA_ALGO_1;
     m_scaling = {1.0, 0.0};
     m_workspaceSize = 0;
     m_workspaceBuffer = NULL;
@@ -112,33 +113,73 @@ void Convolution<T>::ExecuteBackward()
     assert(m_filter->GetPointer() != nullptr);
 
     size_t wsSize = 0;
-
-    // TODO: this should only be done when dimensions / algorithm change.
-    cudnnGetConvolutionBackwardFilterWorkspaceSize(GPUContext.GetCUDNNHandle(),
-                                                   m_features->GetTensorDesc(),
-                                                   m_output->GetTensorDesc(),
-                                                   m_convDesc,
-                                                   m_filter->GetGradFilterDesc(),
-                                                   m_convBwdAlg,
-                                                   &wsSize);
-
-    cout << "Alg BWD FILTER ALGO 0 needs " << (float)wsSize / 1024000.0 << " Mb of GPU workspace." << endl;
-
     unsigned char *devWs = NULL;
 
-    if (wsSize > 0)
-        checkCudaErrors(cudaMalloc(&devWs, wsSize));
+    m_features->IncrementBackwardPass();
 
-    checkCudaErrors(cudnnConvolutionBackwardFilter(GPUContext.GetCUDNNHandle(), &m_scaling[0],
-                                                   m_features->GetTensorDesc(), m_features->GetPointer(),
-                                                   m_output->GetTensorDesc(),
-                                                   m_output->GetGradPointer(),
-                                                   m_convDesc, m_convBwdAlg, devWs,
-                                                   wsSize, &m_scaling[1],
-                                                   m_filter->GetGradFilterDesc(),
-                                                   m_filter->GetGradPointer()));
+    T blendFactors[2] = {1, 1};
+
+    // Get grad with respect to filter.
+    if (m_filter->GetGradFlag())
+    {        
+        blendFactors[1] = m_filter->IsFirstBackwardPass() ? 0 : 1;        
+        m_filter->IncrementBackwardPass();
+
+        // TODO: this should only be done when dimensions / algorithm change.
+        cudnnGetConvolutionBackwardFilterWorkspaceSize(GPUContext.GetCUDNNHandle(),
+                                                       m_features->GetTensorDesc(),
+                                                       m_output->GetTensorDesc(),
+                                                       m_convDesc,
+                                                       m_filter->GetGradFilterDesc(),
+                                                       m_convBwdFilterAlg,
+                                                       &wsSize);
+
+        cout << "Alg BWD FILTER ALGO 0 needs " << (float)wsSize / 1024000.0 << " Mb of GPU workspace." << endl;
+
+        if (wsSize > 0)
+            checkCudaErrors(cudaMalloc(&devWs, wsSize));
+
+        checkCudaErrors(cudnnConvolutionBackwardFilter(GPUContext.GetCUDNNHandle(), &blendFactors[0],
+                                                       m_features->GetTensorDesc(), m_features->GetPointer(),
+                                                       m_output->GetTensorDesc(),
+                                                       m_output->GetGradPointer(),
+                                                       m_convDesc, m_convBwdFilterAlg, devWs,
+                                                       wsSize, &blendFactors[1],
+                                                       m_filter->GetFilterDesc(),
+                                                       m_filter->GetGradPointer()));
+    }
+
+    if (m_features->GetGradFlag())
+    {
+        size_t bwdDataWsSize = 0;        
+
+        blendFactors[1] = m_features->IsFirstBackwardPass() ? 0 : 1;        
+        m_features->IncrementBackwardPass();
+
+        checkCudaErrors(cudnnGetConvolutionBackwardDataWorkspaceSize(GPUContext.GetCUDNNHandle(),
+                                                                     m_filter->GetFilterDesc(), m_output->GetTensorDesc(),
+                                                                     m_convDesc, m_features->GetTensorDesc(),
+                                                                     m_convBwdDataAlg, &bwdDataWsSize));
+
+        if (bwdDataWsSize > wsSize)
+        {
+            checkCudaErrors(cudaFree(devWs));
+            checkCudaErrors(cudaMalloc(&devWs, bwdDataWsSize));
+            wsSize = bwdDataWsSize;
+        }
+
+        checkCudaErrors(cudnnConvolutionBackwardData(GPUContext.GetCUDNNHandle(), &blendFactors[0],
+                                                     m_filter->GetFilterDesc(), m_filter->GetPointer(),
+                                                     m_output->GetTensorDesc(), m_output->GetGradPointer(),
+                                                     m_convDesc, m_convBwdDataAlg,
+                                                     devWs, wsSize, &blendFactors[1], m_features->GetTensorDesc(),
+                                                     m_features->GetGradPointer()));
+    }
+
     if (wsSize > 0)
+    {
         checkCudaErrors(cudaFree(devWs));
+    }
 
     cudaDeviceSynchronize();
     std::cout << "Convolution_grad_filter executed." << std::endl;
