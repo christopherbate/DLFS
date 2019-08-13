@@ -125,7 +125,7 @@ void TestConv()
             QTEqual(resBuffer.size(), 16);
             for (auto val : resBuffer)
             {
-                QTAlmostEqual(val, 17.6, 1e-5);
+                QTEqual(val, 1.0);
             }
         });
 }
