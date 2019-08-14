@@ -21,16 +21,40 @@ struct ImageInfo
     nvjpegChromaSubsampling_t subsampling;
 };
 
+/**
+ * Handles decoding jpegs into 3d arrays
+ * Uses nvidia's cuda jpeg library to do this on 
+ * the GPU.
+ * 
+ * This class does not do file loading, for that see
+ * the DataSource class tree.
+ * 
+ * Currently it automatically zero-pads the entire batch to the size of the largest 
+ * image. 
+ * 
+ * TODO: Periodic padding.
+ * 
+ * Example usage
+ */
 class ImageLoader
 {
 public:
-    ImageLoader(unsigned int batchSize, unsigned int maxHostThread = 4, bool padToMax = true);
+    /**
+     * batchSize - how many images to decode at one time.
+     * maxHostThread - how many cpu threads to spawn during decoding.
+     * padToMax - whether to zero-pad all images out the largest image size.
+     */
+    ImageLoader();
     ~ImageLoader();
 
+    /**
+     * This accepts a vector of buffers containing the binary data of the images.
+     * It also a single Tensor (uint8_t type). 
+     * The images are batch decoded and placed into imgBatchTensor.
+     */
     std::vector<ImageInfo> DecodeJPEG(const std::vector<std::vector<uint8_t>> &buffer,
-                                      Tensor<uint8_t> &imgBatchTensor);
-
-    void WriteBatchBMP();
+                                      Tensor<uint8_t> &imgBatchTensor,
+                                      unsigned int maxHostThread = 4);
 
     static const char *SamplingTypeString(nvjpegChromaSubsampling_t type);
 
@@ -42,16 +66,7 @@ private:
     nvjpegHandle_t m_jpegHandle;
     nvjpegJpegState_t m_jpegState;
     nvjpegOutputFormat_t m_outputFormat;
-    cudaStream_t m_stream;
-
-    int m_batchSize;
-    int m_maxHostThread;
-    bool m_padToMax;
-
-    int m_dev;
-    int m_warmpup;
-    bool m_pipelined;
-    bool m_batched;    
+    cudaStream_t m_stream;    
 };
 
 int writeBMPi(const char *filename, const unsigned char *d_RGB, int pitch,

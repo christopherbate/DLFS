@@ -16,17 +16,11 @@
 using namespace DLFS;
 using namespace std;
 
-ImageLoader::ImageLoader(unsigned int batchSize, unsigned int maxHostThread, bool padToMax)
-	: m_batchSize(batchSize),
-	  m_maxHostThread(maxHostThread),
-	  m_padToMax(padToMax)
+ImageLoader::ImageLoader()
 {
 	m_outputFormat = NVJPEG_OUTPUT_RGBI;
-
 	checkCudaErrors(nvjpegCreate(NVJPEG_BACKEND_DEFAULT, NULL, &m_jpegHandle));
 	checkCudaErrors(nvjpegJpegStateCreate(m_jpegHandle, &m_jpegState));
-	checkCudaErrors(nvjpegDecodeBatchedInitialize(m_jpegHandle, m_jpegState,
-												  m_batchSize, m_maxHostThread, m_outputFormat));	
 	checkCudaErrors(cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking));
 }
 
@@ -34,7 +28,6 @@ ImageLoader::~ImageLoader()
 {
 	checkCudaErrors(nvjpegJpegStateDestroy(m_jpegState));
 	checkCudaErrors(nvjpegDestroy(m_jpegHandle));
-
 	checkCudaErrors(cudaStreamDestroy(m_stream));
 }
 
@@ -90,18 +83,23 @@ void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, Tensor<uint8
 }
 
 /**
+ * Batch decodes images from vector "buffers" into the uint8 tensor "imgBatchTensor"
+ * 
  * Args: 
  * 	Array of buffers filled with jpeg data.
  * 
  * Outputs:
  * 	Pointer to CUDA memory structs
  */
-std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &buffers, Tensor<uint8_t> &imgBatchTensor)
+std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &buffers,
+											   Tensor<uint8_t> &imgBatchTensor,
+											   unsigned int maxHostThread)
 {
 	std::vector<size_t> imgLengths;
 	std::vector<ImageInfo> imgInfoBufs(buffers.size());
 	std::vector<const unsigned char *> imgBuffers;
 	std::vector<nvjpegImage_t> nvjpegBuffer;
+	const unsigned int batchSize = buffers.size();
 
 	for (auto &buf : buffers)
 	{
@@ -117,10 +115,16 @@ std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &bu
 	{
 		nvjpegBuffer.push_back(img.nvImage);
 	}
-	cout << "Decoding ... " << endl;
+
+	checkCudaErrors(nvjpegDecodeBatchedInitialize(m_jpegHandle, m_jpegState,
+												  batchSize,
+												  maxHostThread,
+												  m_outputFormat));
 	checkCudaErrors(nvjpegDecodeBatched(m_jpegHandle, m_jpegState,
 										imgBuffers.data(),
-										imgLengths.data(), nvjpegBuffer.data(), m_stream));
+										imgLengths.data(),
+										nvjpegBuffer.data(),
+										m_stream));
 	checkCudaErrors(cudaStreamSynchronize(m_stream));
 
 	return imgInfoBufs;

@@ -1,9 +1,10 @@
-#include "ExampleSource.hpp"
-#include "dataset_generated.h"
-#include "../utils/Timer.hpp"
-
 #include <iostream>
 #include <fstream>
+
+#include "ExampleSource.hpp"
+#include "dataset_generated.h"
+#include "utils/Timer.hpp"
+#include "Logging.hpp"
 
 using namespace DLFS;
 using namespace std;
@@ -22,7 +23,7 @@ ExampleSource::~ExampleSource()
     }
 }
 
-void ExampleSource::init(const string &path)
+void ExampleSource::Init(const string &path)
 {
     ifstream infile(path, ifstream::in | ifstream::binary);
     
@@ -44,9 +45,8 @@ void ExampleSource::init(const string &path)
 
     m_numExamples = m_dataset->examples()->Length();
 
-    cout << "Loaded datset in " << timer.tick() << " msec."
-         << "\n";
-    cout << "Num Examples: " << m_numExamples << endl;
+    LOG.INFO() << "Loaded serialized datset in " << timer.tick() << " msec.";         
+    LOG.INFO() << "Num Examples: " << m_numExamples;
 }
 
 const Example *ExampleSource::GetExample(unsigned int idx)
