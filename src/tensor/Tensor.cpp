@@ -99,11 +99,11 @@ void Tensor<T>::FillCUDNNDesc()
 template <typename T>
 void Tensor<T>::AllocateIfNecessary()
 {
-    size_t needed_bytes = GetLinearSize() * sizeof(T);
+    size_t needed_bytes = GetLinearSize() * sizeof(T);    
     bool needGradBuffer = GetGradFlag() && m_deviceBufferGrad == nullptr;
     if (needed_bytes > m_bufferSize || m_deviceBuffer == nullptr || needGradBuffer)
     {
-        m_bufferSize = needed_bytes;
+        LOG.DEBUG() << "Needed bytes:" << needed_bytes << " current allocation: " << m_bufferSize;
         Allocate();
     }
 }
@@ -113,6 +113,8 @@ void Tensor<T>::Allocate()
 {
     if (m_deviceBuffer != nullptr || m_deviceBufferGrad != nullptr)
         Deallocate();
+
+    m_bufferSize = GetLinearSize()*sizeof(T);
 
     LOG.DEBUG() << "Allocating tensor " << GetName() << ":" << GetId()
          << " " << (float)m_bufferSize / 1024000.0 << " Mb";

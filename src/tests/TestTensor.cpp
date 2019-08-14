@@ -175,8 +175,6 @@ void TestTensor()
             
             TensorPtr<float> result = features->Convolve(filter, {0, 0}, {1, 1})+bias;
 
-            cout << bias->PrintShape() << " " << result->PrintShape() << endl;            
-
             vector<float> buffer;
             result->CopyBufferToHost(buffer);
             QTEqual(buffer.size(), 62*62);

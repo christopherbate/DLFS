@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "tensor/Tensor.hpp"
+#include "Logging.hpp"
 
 using namespace DLFS;
 using namespace std;
@@ -19,7 +20,7 @@ extern "C" void LaunchPowerKernel(CustomOpDataType dataType,
 
     switch(dataType){
         case CustomOpDataType::Float:
-            cout << "Launching float PointwisePower kernel" << endl;
+            LOG.INFO() << "Launching PointwisePower (float) kernel";
             PointwisePowerFloat<<<blocksPerGrid, thrPerBlock>>>((const float*)inputBuffer,
                                                         *(const float *)power, 
                                                         (float*)outputBuffer,

@@ -111,11 +111,11 @@ public:
     void CalcGradient(TensorBasePtr scalarTensor,
                       std::vector<TensorBasePtr> parameters)
     {
-        std::cout << "Calc gradient of f'n with output name : " << scalarTensor->GetName() << std::endl;
-        std::cout << "With respect to parameters with names : " << std::endl;
+        LOG.INFO() << "Calc gradient of f'n with output name : " << scalarTensor->GetName();
+        LOG.INFO() << "With respect to parameters with names : ";
         for (auto p : parameters)
         {
-            std::cout << p->GetName() << ":" << p->GetId() << std::endl;
+            LOG.INFO() << p->GetName() << ":" << p->GetId();
         }
 
         // Initialize the backward operation. This operation sets up the
@@ -123,18 +123,18 @@ public:
         scalarTensor->InitGradChain();
 
         // Cycle through the operations in reverse order.
-        std::cout << "Operations: " << std::endl;
+        LOG.INFO() << "Conducting backward pass:";
         for (auto opIter = m_opTrace.rbegin(); opIter != m_opTrace.rend(); opIter++)
         {
             auto op = *opIter;
-            std::cout << op->GetName() << ":" << op->GetId() << std::endl;
+            LOG.INFO() << op->GetName() << ":" << op->GetId();
 
             // Skip this op if it's output hasn't seen a backward pass.
             // this means that this op is somehow disconnected or upstream
             // from scalarTensor
             if (op->GetOutputTensor()->GetBackwardPasses() < 1)
             {
-                std::cout << "Skipping this op." << std::endl;
+                LOG.INFO() << "Skipping this op.";
                 continue;
             }
 

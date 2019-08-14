@@ -2,10 +2,9 @@
  * QuickTestCPP.h
  * Author: Christopher Bate
  * 
- * This is my own custom testing framework, modeled (conceptually) after Google's C++ testing library.
  * This is a header-only framework, no need for libraries!
  * The basic idea is simply add several tests, and let the singleton take care of keeping track
- * of running, assertions, etc.
+ * of managing the tests. Use the assertion methods within QuickTest class within testing code.
  */
 #ifndef CTB_TEST
 #define CTB_TEST

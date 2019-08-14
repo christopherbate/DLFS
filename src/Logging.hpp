@@ -53,9 +53,9 @@ public:
 	template <class T>
 	LoggingUtility &operator<<(const T &msg)
 	{
-		if (m_msgLevel > m_minLevel)
+		if (m_msgLevel >= m_minLevel)
 		{
-			std::cout << "[" << GetLabel(m_msgLevel) << msg << "\n";
+			std::cout << msg << " ";
 			m_opened = true;
 		}
 		return *this;
@@ -69,21 +69,25 @@ public:
 	LoggingUtility &WARN()
 	{
 		m_msgLevel = Warn;
+		std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
 		return *this;
 	}
 	LoggingUtility &INFO()
 	{
 		m_msgLevel = Info;
+		std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
 		return *this;
 	}
 	LoggingUtility &DEBUG()
 	{
 		m_msgLevel = Debug;
+		std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
 		return *this;
 	}
 	LoggingUtility &ERROR()
 	{
 		m_msgLevel = Error;
+		std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
 		return *this;
 	}
 

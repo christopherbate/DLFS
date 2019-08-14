@@ -46,14 +46,15 @@ void DefaultTests()
 
 int main()
 {
-    LOG.SetMinLevel(Warn);
+    LOG.SetMinLevel(Debug);
     
-    DefaultTests();
+    // DefaultTests();
     TestGPU();
-    TestTensor();
-    TestAutoDiff();      
-    TestConv();  
-    TestTensorOp();
+    // TestTensor();
+    // TestAutoDiff();      
+    // TestConv();  
+    // TestTensorOp();
+    // TestDataLoader();
 
     TestRunner::GetRunner()->Run();
     TestRunner::GetRunner()->PrintSummary();

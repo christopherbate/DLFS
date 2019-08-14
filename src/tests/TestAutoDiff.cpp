@@ -246,8 +246,6 @@ void TestAutoDiff()
             {
                 QTEqual(v, 14.5);
             }
-            std::cout.precision(10);
-            std::cout << buffer[0] << std::endl;
 
             TensorPtr<float> finalFilter =
                 ADContext.CreateFilter<float>(1, 1, 8, "filter2", 0.1f, true);

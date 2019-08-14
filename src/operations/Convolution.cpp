@@ -87,7 +87,7 @@ void Convolution<T>::ExecuteForward()
                                             m_filter->GetFilterDesc(),
                                             m_convDesc, m_output->GetTensorDesc(), m_convFwdAlg, &wsSize);
 
-    cout << "Alg PRECOMP GEMM needs " << (float)wsSize / 1024000.0 << " Mb of GPU workspace." << endl;
+    LOG.INFO() << "Executing cudnn ConvFwd kernel, " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
 
     unsigned char *devWs = NULL;
     if (wsSize > 0)
@@ -102,8 +102,7 @@ void Convolution<T>::ExecuteForward()
     if (wsSize > 0)
         checkCudaErrors(cudaFree(devWs));
 
-    cudaDeviceSynchronize();
-    std::cout << "Convolution executed." << std::endl;
+    cudaDeviceSynchronize();    
 }
 
 template <typename T>
@@ -134,7 +133,7 @@ void Convolution<T>::ExecuteBackward()
                                                        m_convBwdFilterAlg,
                                                        &wsSize);
 
-        cout << "Alg BWD FILTER ALGO 0 needs " << (float)wsSize / 1024000.0 << " Mb of GPU workspace." << endl;
+        LOG.INFO() << "Execuing cudnn ConvBwdFilter kernel " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
 
         if (wsSize > 0)
             checkCudaErrors(cudaMalloc(&devWs, wsSize));
@@ -168,6 +167,8 @@ void Convolution<T>::ExecuteBackward()
             wsSize = bwdDataWsSize;
         }
 
+        LOG.INFO() << "Execuing cudnn ConvBwdData kernel " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
+
         checkCudaErrors(cudnnConvolutionBackwardData(GPUContext.GetCUDNNHandle(), &blendFactors[0],
                                                      m_filter->GetFilterDesc(), m_filter->GetPointer(),
                                                      m_output->GetTensorDesc(), m_output->GetGradPointer(),
@@ -181,8 +182,7 @@ void Convolution<T>::ExecuteBackward()
         checkCudaErrors(cudaFree(devWs));
     }
 
-    cudaDeviceSynchronize();
-    std::cout << "Convolution_grad_filter executed." << std::endl;
+    cudaDeviceSynchronize();    
 }
 
 template class Convolution<float>;
