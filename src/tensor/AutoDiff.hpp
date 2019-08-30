@@ -111,13 +111,18 @@ public:
     void CalcGradient(TensorBasePtr scalarTensor,
                       std::vector<TensorBasePtr> parameters)
     {
-        LOG.INFO() << "Calc gradient of f'n with output name : " << scalarTensor->GetName();
-        LOG.INFO() << "With respect to parameters with names : ";
+        LOG.INFO() << "Trainable parameters with names : ";
         for (auto p : parameters)
         {
             LOG.INFO() << p->GetName() << ":" << p->GetId();
         }
 
+        CalcGradient(scalarTensor);
+    }
+
+    void CalcGradient(TensorBasePtr scalarTensor)
+    {
+        LOG.INFO() << "Calc gradient of f'n with output name : " << scalarTensor->GetName(); 
         // Initialize the backward operation. This operation sets up the
         // gradient tensor at the top of the chain.
         scalarTensor->InitGradChain();

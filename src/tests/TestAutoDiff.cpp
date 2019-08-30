@@ -330,4 +330,37 @@ void TestAutoDiff()
                 QTAlmostEqual(v, 19.22f*32.0f, 1e-3);
             }            
         });
+
+        TestRunner::GetRunner()->AddTest(
+        "AutoDiff",
+        "Convolution + manual bias + second conv/bias+ pow(2) API test",
+        []() {
+            ADContext.Reset();
+
+            TensorPtr<float> features =
+                ADContext.CreateTensor<float>({1, 10, 10, 3},
+                                              "features", 0.5, false);
+
+            TensorPtr<float> filter =
+                ADContext.CreateFilter<float>(3, 1, 3,
+                                              "filter", 1.0, true);
+
+            TensorPtr<float> bias =
+                ADContext.CreateTensor<float>({1, 8, 8, 1},
+                                              "bias", 1.0, true);
+
+            TensorPtr<float> ft2result = features->Convolve(filter, {0, 0}, {1, 1}) + bias;                        
+
+            TensorPtr<float> finalFilter =
+                ADContext.CreateFilter<float>(1, 1, 8, "filter2", 0.1f, true);
+
+            TensorPtr<float> finalBias =
+                ADContext.CreateTensor<float>({1, 1, 1, 1}, "bias2", 3.3f, true);                            
+
+            TensorPtr<float> res2 = ft2result->Convolve(finalFilter, {0, 0}, {1, 1}) + finalBias;            
+
+            auto powResult = res2 ^ 2.0f;
+
+            ADContext.CalcGradient(powResult);         
+        });
 }
