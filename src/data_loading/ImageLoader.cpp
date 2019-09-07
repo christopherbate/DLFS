@@ -12,6 +12,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <cassert>
 
 using namespace DLFS;
 using namespace std;
@@ -55,7 +56,7 @@ void ImageLoader::GetJPEGInfo(const vector<std::vector<uint8_t>> &dataBuffers,
  * Currently, we have fixed our output format to be RGBi for output to a NHWC tensor, 
  * which is used for tensor cores.
  */
-void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, Tensor<uint8_t> &tensor)
+void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, TensorPtr<uint8_t> tensor)
 {
 	unsigned int idx = 0;
 
@@ -69,14 +70,14 @@ void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, Tensor<uint8
 	}
 
 	TensorShape maxDims = shapeList.FindMaxDims();
-	tensor.SetShape({(int)imgInfos.size(), maxDims[1], maxDims[2], 3});
-	tensor.AllocateIfNecessary();
+	tensor->SetShape({(int)imgInfos.size(), maxDims[1], maxDims[2], 3});
+	tensor->AllocateIfNecessary();
 
 	idx = 0;
-	for (auto devPtr : tensor.GetIterablePointersOverBatch())
+	for (auto devPtr : tensor->GetIterablePointersOverBatch())
 	{
 		imgInfos[idx].channels = 1;
-		imgInfos[idx].nvImage.pitch[0] = 3 * tensor.GetShape()[2];
+		imgInfos[idx].nvImage.pitch[0] = 3 * tensor->GetShape()[2];
 		imgInfos[idx].nvImage.channel[0] = devPtr;
 		idx++;
 	}
@@ -92,7 +93,7 @@ void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, Tensor<uint8
  * 	Pointer to CUDA memory structs
  */
 std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &buffers,
-											   Tensor<uint8_t> &imgBatchTensor,
+											   TensorPtr<uint8_t> imgBatchTensor,
 											   unsigned int maxHostThread)
 {
 	std::vector<size_t> imgLengths;
@@ -130,6 +131,9 @@ std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &bu
 	return imgInfoBufs;
 }
 
+/**
+ * Returns a string for a given nvJpeg Chroma Subsampling type
+ */
 const char *ImageLoader::SamplingTypeString(nvjpegChromaSubsampling_t type)
 {
 	switch (type)
