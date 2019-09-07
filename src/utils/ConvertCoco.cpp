@@ -1,3 +1,10 @@
+/**
+ * This is a command line utility that converts a COCO annotations JSON file
+ * into a flatbuffer with the schema defined in src/data_loading/dataset.fbs
+ * 
+ * Usage:
+ * convert_coco [path to anns.json] [path to output .anns]
+ */
 #include "../data_loading/DataSource.hpp"
 #include "../data_loading/dataset_generated.h"
 #include "external/json.hpp"
@@ -9,7 +16,6 @@
 #include <chrono>
 #include <unordered_map>
 
-// using namespace DLFS;
 using namespace std;
 using json = nlohmann::json;
 using namespace DLFS;
