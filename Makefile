@@ -29,16 +29,17 @@ _NON_MAIN_OBJS =  operations/PointwiseKernels.o \
 NON_MAIN_OBJS = $(addprefix $(OBJDIR)/, $(_NON_MAIN_OBJS))
 
 DLFS_OBJS = .build/main.o $(NON_MAIN_OBJS)
-CONVERT_UTIL_OBJS = .build/utils/ConvertCoco.o $(NON_MAIN_OBJS)
+CONVERT_COCO_OBJS = .build/utils/ConvertCoco.o $(NON_MAIN_OBJS)
+CONVERT_MNIST_OBJS = .build/utils/ConvertMnist.o $(NON_MAIN_OBJS)
 
 _TEST_OBJS = UnitTest.o TestTensor.o TestAutoDiff.o TestGPU.o TestDataLoader.o \
-			TestConv.o TestTensorOp.o
+			TestConv.o TestTensorOp.o TestMNIST.o
 			
 UNIT_TEST_OBJS = $(addprefix $(OBJDIR)/tests/, $(_TEST_OBJS)) $(NON_MAIN_OBJS)
 
-ALL_OBJS = $(DLFS_OBJS) $(CONVERT_UTIL_OBJS) $(UNIT_TEST_OBJS)
+ALL_OBJS = $(DLFS_OBJS) $(CONVERT_MNIST_OBJS) $(UNIT_TEST_OBJS) $(CONVERT_COCO_OBJS)
 
-EXECUTABLES := DLFS utils tests
+EXECUTABLES := DLFS convert_coco convert_mnist tests
 
 DEPS = $(ALL_OBJS:.o=.d)
 
@@ -53,13 +54,16 @@ all: $(EXECUTABLES)
 DLFS: $(DLFS_OBJS)
 	$(NVCC) -o bin/dlfs $(LIBS) $(CUDA_OPTS) $(DLFS_OBJS)
 
-utils: $(CONVERT_UTIL_OBJS)
-	$(NVCC) -o bin/convert_coco $(LIBS) $(CUDA_OPTS) $(CONVERT_UTIL_OBJS)
+convert_coco: $(CONVERT_COCO_OBJS)
+	$(NVCC) -o bin/convert_coco $(LIBS) $(CUDA_OPTS) $(CONVERT_COCO_OBJS)
+
+convert_mnist: $(CONVERT_MNIST_OBJS)
+	$(NVCC) -o bin/convert_mnist $(LIBS) $(CUDA_OPTS) $(CONVERT_MNIST_OBJS)
 
 tests: $(UNIT_TEST_OBJS)
 	$(NVCC) -o bin/test $(LIBS) $(CUDA_OPTS) $(UNIT_TEST_OBJS)
 
-$(CONVERT_UTIL_OBJS) $(UNIT_TEST_OBJS) $(DLFS_OBJS):  $(FLATBUFFERS) | $(DIRS)
+$(CONVERT_COCO_OBJS) $(CONVERT_MNIST_OBJS) $(UNIT_TEST_OBJS) $(DLFS_OBJS):  $(FLATBUFFERS) | $(DIRS)
 
 $(DIRS):
 	mkdir -p $(DIRS)	
