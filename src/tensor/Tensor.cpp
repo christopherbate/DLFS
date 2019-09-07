@@ -2,6 +2,7 @@
 #include <cassert>
 #include <iostream>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include "operations/Convolution.hpp"
@@ -13,10 +14,11 @@ using namespace DLFS;
 using namespace std;
 
 template <typename T>
-Tensor<T>::Tensor()
+Tensor<T>::Tensor(const std::string &name)
 {
     m_shape = {0, 0, 0, 0};
     m_dataType = CUDNN_DATA_FLOAT;
+    this->SetName(name);
 }
 
 template <typename T>
@@ -138,7 +140,7 @@ void Tensor<T>::Deallocate()
         if(m_deviceBufferGrad == m_deviceBuffer)
             m_deviceBufferGrad = nullptr;        
         m_deviceBuffer = nullptr;
-        m_bufferSize = 0;
+        m_bufferSize = 0;        
     }
     if (m_deviceBufferGrad != nullptr)
     {

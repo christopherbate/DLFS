@@ -102,7 +102,7 @@ template <typename T>
 class Tensor : public TensorBase, public std::enable_shared_from_this<Tensor<T>>
 {
 public:
-    Tensor();
+    Tensor(const std::string &name = "");
     ~Tensor();
 
     void SetShape(TensorShape shape);
@@ -234,6 +234,13 @@ public:
                    cudaMemcpyDeviceToHost);
     }
 
+    void CopyBufferToDevice(const std::vector<T> &from)
+    {
+        assert(from.size()*sizeof(T) == GetLinearSize()*sizeof(T));
+        cudaMemcpy(m_deviceBuffer, from.data(), GetLinearSize()*sizeof(T),
+                    cudaMemcpyHostToDevice);
+    }
+
     void CopyGradBufferToHost(std::vector<T> &dst)
     {
         if (dst.size() != GetLinearSize())
@@ -248,7 +255,6 @@ public:
     /** 
      * Overloaded and custom Tensor Operations for Autodiff functionality
      */
-    /* Fill buffer with constant value */
     TensorPtr<T> Convolve(TensorPtr<T> filter, Pad2d padding = {1, 1},
                           Stride2d = {1, 1});
     TensorPtr<T> Add(TensorPtr<T> rhs);
