@@ -23,12 +23,16 @@ table Example {
     file_name:string;
     id:ulong (key);    
     annotations:[Annotation];
+    image:[ubyte];
+    width:ulong;
+    height:ulong;
 }
 
 table Dataset {
     id:ulong;
     examples:[Example];
-    categories:[Category];    
+    categories:[Category];        
 }
+
 
 root_type Dataset;
