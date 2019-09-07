@@ -1,5 +1,17 @@
-#ifndef DATA_LOADER_H
-#define DATA_LOADER_H
+/**
+ *  DataLoader owns a Source (def: LocalSource), ExampleSource (def: flatbuffer file), 
+ *      and other pre-processing loading objects (ImageLoader)
+ *  User declares a dataloader by specifying a location for the source of objects (usually images),
+ *  and also specifies a flatbuffer file that contains the annotations.
+ * 
+ *  Currently data is loaded on demand, but in the future, the loader should run autonomously,
+ *  using query times to adjust the amount of pipelining (simple feedback loop / PID)
+ * 
+ *  - Handles pipelining the batches
+ *  - TODO: Multi-threadded implementation
+ *  - TODO: Add augmentation interfaces and options
+*/
+#pragma once
 
 #include <string>
 #include <vector>
@@ -17,7 +29,7 @@
 namespace DLFS
 {
 
-typedef std::tuple<Tensor<uint8_t>, Tensor<float>, Tensor<float>> ObjDetExampleBatch;
+typedef std::tuple<TensorPtr<uint8_t>, TensorPtr<float>, TensorPtr<float>> ObjDetExampleBatch;
 typedef std::array<float, 4> BBoxArray;
 
 class DataLoader
@@ -79,5 +91,3 @@ private:
     std::queue<ObjDetExampleBatch> m_batchesReady;
 };
 } // namespace DLFS
-
-#endif

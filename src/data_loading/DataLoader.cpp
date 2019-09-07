@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 
 #include "DataLoader.hpp"
 #include "Logging.hpp"
@@ -22,16 +23,17 @@ DataLoader::~DataLoader()
 }
 
 void DataLoader::GetNextBatch()
-{        
+{
     // New data
-    Tensor<uint8_t> imgBatchTensor;
-    Tensor<float> bboxBatchTensor;
-    Tensor<float> catIdBatchTensor;    
+    TensorPtr<uint8_t> imgBatchTensor = std::make_shared<Tensor<uint8_t>>("ImageBatchTensor");
+    TensorPtr<float> bboxBatchTensor = std::make_shared<Tensor<float>>("BboxBatchTensor");
+    TensorPtr<float> catIdBatchTensor = std::make_shared<Tensor<float>>("CatIdBatchTensor");    
 
     // Load examples and image binaries
     vector<vector<uint8_t>> imgBufs(m_batchSize);
     vector<vector<BBoxArray>> boxes(m_batchSize);
     vector<vector<uint32_t>> catIds(m_batchSize);
+
     TensorShapeList boxShape(m_batchSize);
     for (unsigned int i = 0; i < m_batchSize; i++)
     {
@@ -54,25 +56,28 @@ void DataLoader::GetNextBatch()
 
     // Allocate the label tensors.
     auto annMaxDims = boxShape.FindMaxDims();
-    bboxBatchTensor.SetShape(m_batchSize, annMaxDims[1], 4, 1);
-    catIdBatchTensor.SetShape(m_batchSize, annMaxDims[1], 1, 1);
-    bboxBatchTensor.AllocateIfNecessary();
-    catIdBatchTensor.AllocateIfNecessary();
 
-    LOG.DEBUG() << "Batch BBOX shape " << bboxBatchTensor.PrintShape();
+    bboxBatchTensor->SetShape(m_batchSize, annMaxDims[1], 4, 1);
+    catIdBatchTensor->SetShape(m_batchSize, annMaxDims[1], 1, 1);
+
+    bboxBatchTensor->AllocateIfNecessary();
+    catIdBatchTensor->AllocateIfNecessary();
+
+    LOG.DEBUG() << "Batch BBOX shape " << bboxBatchTensor->PrintShape();
 
     unsigned int idx = 0;
-    for (auto devPtr : bboxBatchTensor.GetIterablePointersOverBatch())
+    for (auto devPtr : bboxBatchTensor->GetIterablePointersOverBatch())
     {
-        LOG.DEBUG() << "Copying " << boxes[idx].size() * sizeof(float) <<"bytes to"<< uint64_t(devPtr);
+        LOG.DEBUG() << "Bbox Tensor: Copying " << boxes[idx].size() * sizeof(float) << "bytes to" << uint64_t(devPtr);
         checkCudaErrors(cudaMemcpy(devPtr, boxes[idx].data(),
                                    boxes[idx].size() * sizeof(float), cudaMemcpyHostToDevice));
         idx++;
     }
 
     idx = 0;
-    for (auto devPtr : catIdBatchTensor.GetIterablePointersOverBatch())
+    for (auto devPtr : catIdBatchTensor->GetIterablePointersOverBatch())
     {
+        LOG.DEBUG() << "CatId Tensor: Copying " << boxes[idx].size() * sizeof(float) << "bytes to" << uint64_t(devPtr);
         checkCudaErrors(cudaMemcpy(devPtr, catIds[idx].data(),
                                    catIds[idx].size() * sizeof(float), cudaMemcpyHostToDevice));
         idx++;
@@ -84,5 +89,5 @@ void DataLoader::GetNextBatch()
     m_imgLoader.DecodeJPEG(imgBufs, imgBatchTensor);
 
     // Push into queue
-    m_batchesReady.emplace(std::make_tuple(imgBatchTensor, bboxBatchTensor, catIdBatchTensor));    
+    m_batchesReady.emplace(std::make_tuple(imgBatchTensor, bboxBatchTensor, catIdBatchTensor));
 }
