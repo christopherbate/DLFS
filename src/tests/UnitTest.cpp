@@ -30,7 +30,7 @@ void DefaultTests()
         []() {
             try
             {
-                auto test_fn = [](){
+                auto test_fn = []() {
                     return (cudaError_t)1;
                 };
                 checkCudaErrors(test_fn());
@@ -41,20 +41,20 @@ void DefaultTests()
             }
             throw QuickTestError("exceptCudaErrors did not throw exception.");
         });
-
 }
 
 int main()
 {
     LOG.SetMinLevel(Debug);
-    
-    // DefaultTests();
+
+    DefaultTests();
     TestGPU();
-    // TestTensor();
-    // TestAutoDiff();      
-    // TestConv();  
-    // TestTensorOp();
-    // TestDataLoader();
+    TestTensor();
+    TestAutoDiff();
+    TestConv();
+    TestTensorOp();
+    TestDataLoader();
+    TestMNIST();
 
     TestRunner::GetRunner()->Run();
     TestRunner::GetRunner()->PrintSummary();
