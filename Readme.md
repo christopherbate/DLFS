@@ -8,7 +8,42 @@ alogorithms (mostly object detection) while maximizing speed and the latest feat
 
 This library is GPU only. You must have a system with an NVIDIA GPU card, preferably a recent card. 
 
-Requires installed CUDA >= 10.0. 
+We develop on Ubuntu 19.04 systems with Intel CPUs and RTX 2080 series cards. Recommend 
+you isolate your development environment from the various other software that are trying 
+to manipulate CUDA libraries and runtimes (e.g. `conda`).
+
+Requires :
+- Nvidia driver (we're on 418)
+- CUDA >= 10.1 (we're developing on the bleeding edge, `cuda_10.1.243`. We install with the `run` file on 19.04)
+- CuDNN 7.6.3 (recommend installing manually with the `tar` file, not the `deb`)
+- NvJPEG
+- flatbuffer compiler (see below)
+- cmake
+- COCO 2017 images and labels (see below)
+
+## flatbufferc
+When setting up a new environment, you must clone and build Google's flatbuffer compiler.
+
+```
+git clone git@github.com:google/flatbuffers.git
+cd flatbuffers
+mkdir build && cd build
+cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release ..
+make -j[num cores]
+sudo make install (or add the created bin to your path)
+```
+
+## COCO 
+
+We setup all datasets in `~/datasets`.
+
+```
+mkdir -p  ~/datasets/coco && cd ~/datasets/coco
+wget http://images.cocodataset.org/zips/train2017.zip
+wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
+unzip train2017.zip
+unzip annotations_trainval2017.zip
+```
 
 # Build
 
