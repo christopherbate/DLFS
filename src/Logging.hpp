@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <string>
+
 #include <nvjpeg.h>
 #include <cudnn.h>
 #include <cublas.h>
@@ -66,28 +67,34 @@ public:
 		m_minLevel = l;
 	}
 
+	void PrintPrefix()
+	{
+		if(m_msgLevel >= m_minLevel)
+			std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
+	}
+
 	LoggingUtility &WARN()
 	{
 		m_msgLevel = Warn;
-		std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
+		PrintPrefix();
 		return *this;
 	}
 	LoggingUtility &INFO()
 	{
 		m_msgLevel = Info;
-		std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
+		PrintPrefix();
 		return *this;
 	}
 	LoggingUtility &DEBUG()
 	{
 		m_msgLevel = Debug;
-		std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
+		PrintPrefix();
 		return *this;
 	}
 	LoggingUtility &ERROR()
 	{
 		m_msgLevel = Error;
-		std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
+		PrintPrefix();
 		return *this;
 	}
 
@@ -115,6 +122,7 @@ private:
 	}
 };
 
+// Global Logging Util
 extern LoggingUtility LOG;
 
 template <typename T>
