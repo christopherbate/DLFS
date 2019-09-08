@@ -116,7 +116,7 @@ void TestDataLoader()
             DataLoader dataLoader("./mnist.train.db");
             dataLoader.SetBatchSize(5);
 
-            for (auto i = 0; i < 1; i++)
+            for (auto i = 0; i < 10; i++)
             {
                 dataLoader.GetNextBatch();
                 dataLoader.Summary();

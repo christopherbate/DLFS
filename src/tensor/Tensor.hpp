@@ -142,7 +142,7 @@ public:
     inline std::vector<unsigned char *> GetIterablePointersOverBatch()
     {
         std::vector<unsigned char *> batchPointers(m_shape[0]);
-        int itemSize = m_shape[1] * m_shape[2] * m_shape[3];
+        int itemSize = m_shape[1] * m_shape[2] * m_shape[3] * sizeof(T);
         for (int i = 0; i < m_shape[0]; i++)
         {
             batchPointers[i] = m_deviceBuffer + itemSize * i;
@@ -223,7 +223,7 @@ public:
         IncrementBackwardPass();
     }
 
-    void CopyBufferToHost(std::vector<T> &dst)
+    inline void CopyBufferToHost(std::vector<T> &dst)
     {
         if (dst.size() != GetLinearSize())
         {
@@ -234,11 +234,25 @@ public:
                    cudaMemcpyDeviceToHost);
     }
 
-    void CopyBufferToDevice(const std::vector<T> &from)
+    inline void CopyBufferToDevice(const std::vector<T> &from)
     {
-        assert(from.size()*sizeof(T) == GetLinearSize()*sizeof(T));
-        cudaMemcpy(m_deviceBuffer, from.data(), GetLinearSize()*sizeof(T),
-                    cudaMemcpyHostToDevice);
+        assert(from.size() * sizeof(T) == GetLinearSize() * sizeof(T));
+        checkCudaErrors(cudaMemcpy(m_deviceBuffer, from.data(), GetLinearSize() * sizeof(T),
+                                   cudaMemcpyHostToDevice));
+    }
+
+    inline void CopyBatchBuffersToDevice(std::vector<std::vector<T>> &from)
+    {
+        assert((int)from.size() == m_shape[0]);
+        int itemSize = m_shape[1] * m_shape[2] * m_shape[3] * sizeof(T);
+        for (int i = 0; i < m_shape[0]; i++)
+        {            
+            assert((int)(from[i].size() * sizeof(T)) == itemSize);
+            uint8_t *batchPtr = m_deviceBuffer + itemSize*i;
+            checkCudaErrors(cudaMemcpy(batchPtr, from[i].data(),
+                                       from[i].size() * sizeof(T),
+                                       cudaMemcpyHostToDevice));
+        }
     }
 
     void CopyGradBufferToHost(std::vector<T> &dst)

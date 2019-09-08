@@ -239,3 +239,4 @@ TensorPtr<T> Tensor<T>::Power(T scalar)
 
 template class Tensor<float>;
 template class Tensor<uint8_t>;
+template class Tensor<uint16_t>;

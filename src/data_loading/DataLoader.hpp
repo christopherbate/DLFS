@@ -29,17 +29,26 @@
 namespace DLFS
 {
 
-typedef std::tuple<TensorPtr<uint8_t>, TensorPtr<float>, TensorPtr<float>> ObjDetExampleBatch;
+typedef std::tuple<TensorPtr<uint8_t>, TensorPtr<float>, TensorPtr<uint16_t>> ObjDetExampleBatch;
 typedef std::array<float, 4> BBoxArray;
 
 class DataLoader
 {
 public:
-    DataLoader(const std::string &examples_path,
-               const std::string &local_data_dir);
+    DataLoader(const std::string &examples_path);
     ~DataLoader();
+    
+    void SetFileSource(const std::string &data_src)
+    {
+        m_useFileSource = true;
+        m_dataSource.SetDirectory(data_src);
+    }
 
     void GetNextBatch();
+    
+    inline void SetUseJpegDecoder(bool val){
+        m_useJpegDecoder = val;
+    }
 
     inline void SetBatchSize(unsigned int batchSize)
     {
@@ -86,6 +95,8 @@ private:
     LocalSource m_dataSource;
     ExampleSource m_exampleSource;
     ImageLoader m_imgLoader;
+    bool m_useFileSource{false};
+    bool m_useJpegDecoder{false};
 
     // The set of batches which are already loaded.
     std::queue<ObjDetExampleBatch> m_batchesReady;

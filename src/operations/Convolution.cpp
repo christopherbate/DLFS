@@ -187,3 +187,4 @@ void Convolution<T>::ExecuteBackward()
 
 template class Convolution<float>;
 template class Convolution<uint8_t>;
+template class Convolution<uint16_t>;
