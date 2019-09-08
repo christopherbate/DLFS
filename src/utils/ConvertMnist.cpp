@@ -72,12 +72,18 @@ void ReadImages(std::ifstream &stream_imgs,
     }
 
     stream_labels.seekg(2 * 4);
-
     labels_buffer.resize(num_images);
-    stream_labels.read((char *)labels_buffer.data(), labels_buffer.size());
+    stream_labels.read((char *)labels_buffer.data(), labels_buffer.size());    
     if (stream_labels.gcount() != (unsigned)labels_buffer.size())
     {
         throw std::runtime_error("Short read: only " + to_string(stream_labels.gcount()) + " labels.");
+    }
+    for(auto &it : labels_buffer){
+        if(it >= 10)
+        {
+            cout << unsigned(it) << " was detected, labels should be 0-9" << endl;
+            throw std::runtime_error("Out of bounds.");
+        }
     }
 }
 
@@ -107,7 +113,7 @@ int main(int argc, char **argv)
         throw std::runtime_error("Could not open image file.");
     }
 
-    ifstream infile_label(input_path_img, ifstream::in | ifstream::binary);
+    ifstream infile_label(input_path_label, ifstream::in | ifstream::binary);
     if (!infile_label.is_open())
     {
         throw std::runtime_error("Could not open label file.");
@@ -175,7 +181,7 @@ int main(int argc, char **argv)
     datasetBuilder.add_id(0);
     datasetBuilder.add_examples(fb_examples);
     datasetBuilder.add_categories(fb_cats);
-    auto dataset = datasetBuilder.Finish();    
+    auto dataset = datasetBuilder.Finish();
     builder.Finish(dataset);
 
     ofstream outfile(output_path, ofstream::out | ofstream::binary);
