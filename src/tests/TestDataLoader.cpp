@@ -96,10 +96,27 @@ void TestDataLoader()
         "DataLoader",
         "Can intatiate data loader and retrieve batches.",
         []() {
-            DataLoader dataLoader("./coco.val.ann.db", "/home/chris/datasets/coco/val2017/");
+            DataLoader dataLoader("./coco.val.ann.db");            
+            dataLoader.SetFileSource("/home/chris/datasets/coco/val2017/");
+            dataLoader.SetUseJpegDecoder(true);
+
             dataLoader.SetBatchSize(5);
 
             for (auto i = 0; i < 10; i++)
+            {
+                dataLoader.GetNextBatch();
+                dataLoader.Summary();
+            }            
+        });    
+
+    TestRunner::GetRunner()->AddTest(
+        "DataLoader",
+        "Can intatiate data loader and retrieve batches with image data in array",
+        []() {
+            DataLoader dataLoader("./mnist.train.db");
+            dataLoader.SetBatchSize(5);
+
+            for (auto i = 0; i < 1; i++)
             {
                 dataLoader.GetNextBatch();
                 dataLoader.Summary();
