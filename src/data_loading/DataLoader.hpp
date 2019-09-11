@@ -77,6 +77,12 @@ public:
         m_prefetchLimit = prefetchLimit;
     }
 
+    ObjDetExampleBatch DequeBatch(){
+        ObjDetExampleBatch batch = m_batchesReady.front();
+        m_batchesReady.pop();
+        return batch;
+    }
+
 private:
     unsigned int m_batchSize{1};
 
