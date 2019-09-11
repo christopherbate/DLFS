@@ -1,3 +1,21 @@
+/**
+ * Tensor object implementation
+ * 
+ * TensorBase implements required functions irrespective
+ * of template/datatype (mostly things required by the autodiff 
+ * system)
+ * 
+ * Tensor inherits from TensorBase and is a templated class
+ * Tensor handles all internal cudnn buffers and has methods for 
+ * initialization, copying, and overloads certain arithmetic operators.
+ * 
+ * The Tensor class's arithmetic methods automaticallly interface with 
+ * the global AutoDiff context in order to add the op and the input/output 
+ * tensors to the op stack.
+ * 
+ * Christopher Bate 
+ * August/September 2019
+ **/
 #pragma once
 
 #include <array>
@@ -115,10 +133,22 @@ public:
     void AllocateIfNecessary();
 
     /**
+     * Type-Casting
+     * Returns a pointer to a new Tensor with the new type.
+     * 
+     * TODO: CUDA kernel
+     */
+    template <typename TargetType>    
+    TensorPtr<TargetType> Cast();
+    
+
+    /**
     * Initialization Functions
     */
 
-    /* Fill buffer with constant value */
+    /**
+     *  Fills device-side buffer with constant value 
+     **/
     void FillConstant(T constVal)
     {
         assert(m_deviceBuffer != nullptr);
@@ -129,7 +159,9 @@ public:
                                    cudaMemcpyHostToDevice));
     }
 
-    /* Fill gradient buffer with constant value */
+    /**
+     *  Fills gradient buffer with constant value 
+     **/
     void FillConstantGrad(T constVal)
     {
         assert(m_deviceBufferGrad != nullptr);
@@ -139,6 +171,11 @@ public:
                                    cudaMemcpyHostToDevice));
     }
 
+    /**
+     * Retrieves a vector of device-side buffer pointers 
+     * which each point to an individual sub-tensor in order based 
+     * on the first dimension of this tensor.
+     */
     inline std::vector<unsigned char *> GetIterablePointersOverBatch()
     {
         std::vector<unsigned char *> batchPointers(m_shape[0]);
@@ -212,12 +249,6 @@ public:
     inline void InitGradChain()
     {
         assert(m_deviceBuffer != nullptr);
-
-        // if (m_deviceBufferGrad)
-        // {
-        //     checkCudaErrors(cudaFree(m_deviceBufferGrad));
-        // }
-        // m_deviceBufferGrad = m_deviceBuffer;
         FillConstantGrad(1.0f);
         ResetBackwardPasses();
         IncrementBackwardPass();

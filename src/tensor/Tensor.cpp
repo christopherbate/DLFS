@@ -94,14 +94,14 @@ void Tensor<T>::FillCUDNNDesc()
         if (!m_tensorDesc)
             checkCudaErrors(cudnnCreateTensorDescriptor(&m_tensorDesc));
         checkCudaErrors(cudnnSetTensor4dDescriptor(m_tensorDesc, CUDNN_TENSOR_NHWC, m_dataType,
-                                                   m_shape[0], m_shape[3], m_shape[1], m_shape[2]));       
+                                                   m_shape[0], m_shape[3], m_shape[1], m_shape[2]));
     }
 }
 
 template <typename T>
 void Tensor<T>::AllocateIfNecessary()
 {
-    size_t needed_bytes = GetLinearSize() * sizeof(T);    
+    size_t needed_bytes = GetLinearSize() * sizeof(T);
     bool needGradBuffer = GetGradFlag() && m_deviceBufferGrad == nullptr;
     if (needed_bytes > m_bufferSize || m_deviceBuffer == nullptr || needGradBuffer)
     {
@@ -116,31 +116,31 @@ void Tensor<T>::Allocate()
     if (m_deviceBuffer != nullptr || m_deviceBufferGrad != nullptr)
         Deallocate();
 
-    m_bufferSize = GetLinearSize()*sizeof(T);
+    m_bufferSize = GetLinearSize() * sizeof(T);
 
     LOG.DEBUG() << "Allocating tensor " << GetName() << ":" << GetId()
-         << " " << (float)m_bufferSize / 1024000.0 << " Mb";
+                << " " << (float)m_bufferSize / 1024000.0 << " Mb";
     checkCudaErrors(cudaMalloc(&m_deviceBuffer, m_bufferSize));
 
     if (GetGradFlag())
     {
         LOG.DEBUG() << "Allocating grad tensor " << GetName() << ":" << GetId()
-             << " " << (float)m_bufferSize / 1024000.0 << " Mb";
+                    << " " << (float)m_bufferSize / 1024000.0 << " Mb";
         checkCudaErrors(cudaMalloc(&m_deviceBufferGrad, m_bufferSize));
     }
 }
 
 template <typename T>
 void Tensor<T>::Deallocate()
-{    
+{
     if (m_deviceBuffer != nullptr)
     {
         LOG.DEBUG() << "Attempting to deallocate Tensor " << GetName() << ":" << GetId();
         checkCudaErrors(cudaFree(m_deviceBuffer));
-        if(m_deviceBufferGrad == m_deviceBuffer)
-            m_deviceBufferGrad = nullptr;        
+        if (m_deviceBufferGrad == m_deviceBuffer)
+            m_deviceBufferGrad = nullptr;
         m_deviceBuffer = nullptr;
-        m_bufferSize = 0;        
+        m_bufferSize = 0;
     }
     if (m_deviceBufferGrad != nullptr)
     {
@@ -174,7 +174,7 @@ TensorPtr<T> Tensor<T>::Convolve(TensorPtr<T> filter,
     convOp->SetOutput(outputTensor);
 
     LOG << "Conv op prepared, output shape: "
-         << outputTensor->PrintShape();
+        << outputTensor->PrintShape();
 
     convOp->ExecuteForward();
 
@@ -188,14 +188,14 @@ TensorPtr<T> Tensor<T>::Convolve(TensorPtr<T> filter,
 template <typename T>
 TensorPtr<T> Tensor<T>::Add(TensorPtr<T> rhs)
 {
-     shared_ptr<TensorOp<T>> addOp =
+    shared_ptr<TensorOp<T>> addOp =
         make_shared<TensorOp<T>>(PW_ADD);
 
     addOp->SetName("AddOp");
     addOp->SetInput(this->shared_from_this(), 0);
     addOp->SetInput(rhs, 1);
 
-    TensorPtr<T> outputTensor = ADContext.CreateTensor<T>();     
+    TensorPtr<T> outputTensor = ADContext.CreateTensor<T>();
     if (rhs->GetGradFlag() || GetGradFlag())
         outputTensor->SetGradFlag(true);
     outputTensor->SetShape(GetShape());
@@ -214,14 +214,14 @@ TensorPtr<T> Tensor<T>::Add(TensorPtr<T> rhs)
 template <typename T>
 TensorPtr<T> Tensor<T>::Power(T scalar)
 {
-     shared_ptr<TensorOp<T>> powOp =
+    shared_ptr<TensorOp<T>> powOp =
         make_shared<TensorOp<T>>(PW_POW);
 
     powOp->SetName("PowerOp");
     powOp->SetInput(this->shared_from_this(), 0);
     powOp->SetPower(scalar);
 
-    TensorPtr<T> outputTensor = ADContext.CreateTensor<T>();     
+    TensorPtr<T> outputTensor = ADContext.CreateTensor<T>();
     if (GetGradFlag())
         outputTensor->SetGradFlag(true);
     outputTensor->SetShape(GetShape());
@@ -235,6 +235,29 @@ TensorPtr<T> Tensor<T>::Power(T scalar)
     ADContext.AddOp(powOp);
 
     return outputTensor;
+}
+
+template <typename T>
+template <typename TargetType>
+TensorPtr<TargetType> Tensor<T>::Cast()
+{
+    TensorPtr<TargetType> cTensor = ADContext.CreateTensor<TargetType>();        
+    cTensor->SetGradFlag(m_calcGrad);
+    cTensor->SetShape(m_shape);
+    cTensor->SetName(m_name+"-cast");
+    cTensor->AllocateIfNecessary();
+
+    // Perform conversion on the host side (should update to 
+    // CUDA kernel soon).
+    std::vector<T> buffer;
+    std::vector<TargetType> newBuffer(buffer.size());
+    this->CopyBufferToHost(buffer);
+    for(unsigned int i = 0; i <buffer; i++){
+        newBuffer[i] = static_cast<TargetType>(buffer[i]);
+    }        
+    cTensor->CopyBufferToDevice(newBuffer);
+
+    return cTensor;
 }
 
 template class Tensor<float>;
