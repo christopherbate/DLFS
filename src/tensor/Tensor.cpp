@@ -185,9 +185,28 @@ TensorPtr<T> Tensor<T>::Convolve(TensorPtr<T> filter,
     return outputTensor;
 }
 
+/**
+ * Addition / Subtraction
+ * 
+ * This function supports simple broadcasting. It looks over the dimensions.
+ * After the first dimension where the numbers disagree, they must agree.
+ */
 template <typename T>
 TensorPtr<T> Tensor<T>::Add(TensorPtr<T> rhs)
 {
+    // Check broadcasting
+    // bool differ = false;
+    // auto rhsShape = rhs->GetShape();
+    // for(unsigned int i = 0; i < 4; i++){
+    //     if(rhsShape[i] != m_shape[i]){
+    //         if(differ){
+    //             throw DLFSError("Broadcasting failure, " + m_name + ", " + rhs->GetName());
+    //         } else {
+    //             differ = true;
+    //         }
+    //     }
+    // }
+
     shared_ptr<TensorOp<T>> addOp =
         make_shared<TensorOp<T>>(PW_ADD);
 
@@ -241,20 +260,22 @@ template <typename T>
 template <typename TargetType>
 TensorPtr<TargetType> Tensor<T>::Cast()
 {
-    TensorPtr<TargetType> cTensor = ADContext.CreateTensor<TargetType>();        
-    cTensor->SetGradFlag(m_calcGrad);
-    cTensor->SetShape(m_shape);
-    cTensor->SetName(m_name+"-cast");
+    TensorPtr<TargetType> cTensor = ADContext.CreateTensor<TargetType>();
+    cTensor->SetGradFlag(this->m_calcGrad);
+    cTensor->SetShape(this->m_shape);
+    cTensor->SetName(this->m_name + "-cast");
     cTensor->AllocateIfNecessary();
 
-    // Perform conversion on the host side (should update to 
+    // Perform conversion on the host side (should update to
     // CUDA kernel soon).
-    std::vector<T> buffer;
-    std::vector<TargetType> newBuffer(buffer.size());
+    std::vector<T> buffer(GetLinearSize());
+    std::vector<TargetType> newBuffer(GetLinearSize());
+
     this->CopyBufferToHost(buffer);
-    for(unsigned int i = 0; i <buffer; i++){
+    for (unsigned int i = 0; i < buffer.size(); i++)
+    {
         newBuffer[i] = static_cast<TargetType>(buffer[i]);
-    }        
+    }
     cTensor->CopyBufferToDevice(newBuffer);
 
     return cTensor;
@@ -263,3 +284,5 @@ TensorPtr<TargetType> Tensor<T>::Cast()
 template class Tensor<float>;
 template class Tensor<uint8_t>;
 template class Tensor<uint16_t>;
+
+template TensorPtr<float> Tensor<uint8_t>::Cast();

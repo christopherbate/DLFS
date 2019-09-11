@@ -113,7 +113,7 @@ void TestTensor()
 
             TensorPtr<float> features = std::make_shared<Tensor<float>>();
             features->SetGradFlag(true);
-            features->SetShape(1, 12, 12, 3);            
+            features->SetShape(1, 12, 12, 3);
             features->SetName("features");
             features->AllocateIfNecessary();
             features->FillConstant(1.3);
@@ -121,12 +121,14 @@ void TestTensor()
 
             vector<float> buffer;
             features->CopyBufferToHost(buffer);
-            for(auto v : buffer){
+            for (auto v : buffer)
+            {
                 QTEqual(v, 1.3);
             }
 
             features->CopyGradBufferToHost(buffer);
-            for(auto v : buffer){
+            for (auto v : buffer)
+            {
                 QTEqual(v, 0.1);
             }
         });
@@ -139,22 +141,43 @@ void TestTensor()
 
             TensorPtr<float> features = std::make_shared<Tensor<float>>();
             features->SetGradFlag(true);
-            features->SetShape(1, 12, 12, 3);            
+            features->SetShape(1, 12, 12, 3);
             features->SetName("features");
             features->AllocateIfNecessary();
             features->FillConstant(3.0);
             features->FillConstantGrad(0.0);
 
-            TensorPtr<float> out = features^2.0f;
+            TensorPtr<float> out = features ^ 2.0f;
 
             vector<float> buffer;
             out->CopyBufferToHost(buffer);
-            for(auto v : buffer){
+            for (auto v : buffer)
+            {
                 QTEqual(v, 9.0);
             }
         });
 
-    
+    TestRunner::GetRunner()->AddTest(
+        "Tensor",
+        "Cast",
+        []() {
+            ADContext.Reset();
+
+            TensorShape imgShape = {1, 10, 10, 3};
+
+            TensorPtr<uint8_t> imgTensor =
+                ADContext.CreateTensor<uint8_t>(imgShape, "TestImg", 1, false);
+
+            auto convertedTensor = imgTensor->Cast<float>();
+
+            vector<float> buffer;
+            convertedTensor->CopyBufferToHost(buffer);
+
+            for(auto v : buffer){
+                QTEqual(v, 1.0f);
+            }
+        });
+
     TestRunner::GetRunner()->AddTest(
         "Tensor",
         "Conv,operator+ overload combination",
@@ -172,14 +195,15 @@ void TestTensor()
             TensorPtr<float> bias =
                 ADContext.CreateTensor<float>({1, 62, 62, 1},
                                               "bias", 3.0, true);
-            
-            TensorPtr<float> result = features->Convolve(filter, {0, 0}, {1, 1})+bias;
+
+            TensorPtr<float> result = features->Convolve(filter, {0, 0}, {1, 1}) + bias;
 
             vector<float> buffer;
             result->CopyBufferToHost(buffer);
-            QTEqual(buffer.size(), 62*62);
-            for(auto v:buffer){
-                QTEqual(v, 54.0f+3.0);
-            }            
+            QTEqual(buffer.size(), 62 * 62);
+            for (auto v : buffer)
+            {
+                QTEqual(v, 54.0f + 3.0);
+            }
         });
 }

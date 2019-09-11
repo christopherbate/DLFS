@@ -91,7 +91,7 @@ public:
         m_numBackPasses++;
     }
 
-private:
+protected:
     bool m_calcGrad{false};
     uint32_t m_id{0};
     std::string m_name{"UnnamedTensor"};
@@ -255,11 +255,14 @@ public:
     }
 
     inline void CopyBufferToHost(std::vector<T> &dst)
-    {
+    {        
         if (dst.size() != GetLinearSize())
         {
             dst.resize(GetLinearSize());
         }
+
+        assert(dst.size() == GetLinearSize());
+
         cudaMemcpy(dst.data(), m_deviceBuffer,
                    GetLinearSize() * sizeof(T),
                    cudaMemcpyDeviceToHost);
