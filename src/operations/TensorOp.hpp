@@ -123,10 +123,11 @@ private:
         assert(m_inputA != nullptr);
         assert(m_inputB != nullptr);
         assert(m_output != nullptr);
-        for(auto i=(unsigned)0;i<4; i++)
-        {
-            assert(m_inputA->GetShape()[i] == m_inputB->GetShape()[i]);
-        }
+
+        // for(auto i=(unsigned)0;i<4; i++)
+        // {
+        //     assert(m_inputA->GetShape()[i] == m_inputB->GetShape()[i]);
+        // }
 
         checkCudaErrors(cudnnSetOpTensorDescriptor(m_tensorOpDesc,
                                                    CUDNN_OP_TENSOR_ADD,
