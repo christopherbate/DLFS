@@ -44,7 +44,7 @@ void TestDataLoader()
                 auto file_name = ex->file_name()->str();
                 avgTime += timer.tick_us();
             }
-            avgTime = avgTime*1e-3;
+            avgTime = avgTime * 1e-3;
 
             cout << "Average example load time: " << avgTime << "uSec " << endl;
         });
@@ -56,9 +56,12 @@ void TestDataLoader()
             ImageLoader imgLoader;
             LocalSource localSrc("/home/chris/datasets/coco/val2017/");
             TensorPtr<uint8_t> imgBatchTensor = std::make_shared<Tensor<uint8_t>>("ImageBatchTensor");
-            
-            auto img1 = localSrc.get_blob("000000000139.jpg");
-            auto img2 = localSrc.get_blob("000000000285.jpg");
+
+            vector<uint8_t> img1;
+            vector<uint8_t> img2;
+
+            localSrc.GetBlob("000000000139.jpg", img1);            
+            localSrc.GetBlob("000000000285.jpg", img2);
 
             std::vector<std::vector<uint8_t>> data = {img1, img2};
 
@@ -73,7 +76,7 @@ void TestDataLoader()
 
             avgTime = avgTime / 2.0;
             LOG.INFO() << "Average image decode time (2 imgs): " << avgTime
-                 << " msec";
+                       << " msec";
 
             auto count = 0;
             avgTime = 0.0;
@@ -86,17 +89,17 @@ void TestDataLoader()
                           3 * tensorShape[2], tensorShape[2], tensorShape[1]);
                 avgTime += timer.tick();
                 count++;
-            }       
+            }
             avgTime = avgTime / 2.0;
             LOG.INFO() << "Average image write time (2 imgs): " << avgTime
-                 << " msec";
-        });    
+                       << " msec";
+        });
 
     TestRunner::GetRunner()->AddTest(
         "DataLoader",
         "Can intatiate data loader and retrieve batches.",
         []() {
-            DataLoader dataLoader("./coco.val.ann.db");            
+            DataLoader dataLoader("./coco.val.ann.db");
             dataLoader.SetFileSource("/home/chris/datasets/coco/val2017/");
             dataLoader.SetUseJpegDecoder(true);
 
@@ -106,8 +109,8 @@ void TestDataLoader()
             {
                 dataLoader.GetNextBatch();
                 dataLoader.Summary();
-            }            
-        });    
+            }
+        });
 
     TestRunner::GetRunner()->AddTest(
         "DataLoader",
@@ -120,6 +123,6 @@ void TestDataLoader()
             {
                 dataLoader.GetNextBatch();
                 dataLoader.Summary();
-            }            
-        });    
+            }
+        });
 }

@@ -4,12 +4,14 @@
 #include <string>
 #include <vector>
 
-namespace DLFS{
+namespace DLFS
+{
 class DataSource
 {
 public:
-    virtual std::vector<uint8_t> get_blob( const std::string &blob_path ) = 0;
+    virtual void GetBlob(const std::string &blobPath,
+                         std::vector<uint8_t> &destBuffer) = 0;
 };
-}
+} // namespace DLFS
 
 #endif

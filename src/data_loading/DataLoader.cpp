@@ -50,7 +50,7 @@ void DataLoader::GetNextBatch()
             if(!m_useFileSource){
                 throw std::runtime_error("DataLoader was not configured with a DataSource, but .db does not contain images.");
             }            
-            m_dataSource.getBlob(ex->file_name()->str(), imgBufs[i]);
+            m_dataSource.GetBlob(ex->file_name()->str(), imgBufs[i]);
         }
 
         unsigned int numAnn = ex->annotations()->Length();

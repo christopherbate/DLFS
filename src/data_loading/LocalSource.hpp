@@ -1,3 +1,7 @@
+/**
+ * LocalSource - implements DataSource interface for 
+ * loading files from local storage
+ */
 #ifndef LOCAL_SOURCE_H_
 #define LOCAL_SOURCE_H_
 
@@ -6,20 +10,21 @@
 
 #include "./DataSource.hpp"
 
-namespace DLFS{
+namespace DLFS
+{
 class LocalSource : public DataSource
 {
 public:
-    LocalSource( const std::string &base_dir = "");
-    void SetDirectory(const std::string &dir){
-        m_baseDir = dir;
-    }
-    std::vector<uint8_t> get_blob(const std::string &blob_path);
+    LocalSource(const std::string &base_dir = "");
 
-    void getBlob(const std::string &blobPath, std::vector<uint8_t> &destBuffer);
+    void SetDirectory(const std::string &dir);
+
+    void GetBlob(const std::string &blobPath,
+                 std::vector<uint8_t> &destBuffer);
+
 private:
     std::string m_baseDir;
 };
-}
+} // namespace DLFS
 
 #endif

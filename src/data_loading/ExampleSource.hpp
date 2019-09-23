@@ -26,9 +26,10 @@ public:
      */
     void Init(const std::string &path);
 
-    const Example* GetExample(unsigned int idx);
+    const Example *GetExample(unsigned int idx);
 
-    inline unsigned int GetNumExamples(){
+    inline unsigned int GetNumExamples()
+    {
         return m_numExamples;
     }
 
