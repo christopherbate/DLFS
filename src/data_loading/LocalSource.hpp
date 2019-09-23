@@ -17,13 +17,10 @@ class LocalSource : public DataSource
 public:
     LocalSource(const std::string &base_dir = "");
 
-    void SetDirectory(const std::string &dir);
-
     void GetBlob(const std::string &blobPath,
-                 std::vector<uint8_t> &destBuffer);
+                 std::vector<uint8_t> &destBuffer) override;
 
 private:
-    std::string m_baseDir;
 };
 } // namespace DLFS
 

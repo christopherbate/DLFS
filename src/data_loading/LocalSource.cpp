@@ -5,7 +5,7 @@ using namespace DLFS;
 
 LocalSource::LocalSource(const std::string &base_dir)
 {
-    m_baseDir = base_dir;
+    this->SetPath(base_dir);
 }
 
 /**
@@ -15,7 +15,7 @@ void LocalSource::GetBlob(const std::string &blobPath, std::vector<uint8_t> &des
 {
     unsigned int file_size = 0;
 
-    std::string full_path = m_baseDir + blobPath;
+    std::string full_path = this->GetPath() + blobPath;
 
     std::ifstream infile(full_path, std::ifstream::binary);
     if (!infile.is_open())
@@ -29,12 +29,4 @@ void LocalSource::GetBlob(const std::string &blobPath, std::vector<uint8_t> &des
     destBuffer.resize(file_size);
     infile.read(reinterpret_cast<char *>(destBuffer.data()),
                 destBuffer.size());
-}
-
-/**
- * SetDirectory
- */
-void LocalSource::SetDirectory(const std::string &path)
-{
-    m_baseDir = path;
 }
