@@ -60,7 +60,7 @@ void TestDataLoader()
             vector<uint8_t> img1;
             vector<uint8_t> img2;
 
-            localSrc.GetBlob("000000000139.jpg", img1);            
+            localSrc.GetBlob("000000000139.jpg", img1);
             localSrc.GetBlob("000000000285.jpg", img2);
 
             std::vector<std::vector<uint8_t>> data = {img1, img2};
@@ -97,17 +97,17 @@ void TestDataLoader()
 
     TestRunner::GetRunner()->AddTest(
         "DataLoader",
-        "Can intatiate data loader and retrieve batches.",
+        "Can intatiate data loader and retrieve batches (COCO VAL).",
         []() {
-            DataLoader dataLoader("./coco.val.ann.db");
-            dataLoader.SetFileSource("/home/chris/datasets/coco/val2017/");
-            dataLoader.SetUseJpegDecoder(true);
-
+            DataLoader dataLoader;
+            dataLoader.LoadDataset("./coco.val.ann.db");
+            dataLoader.SetDataSourcePath("/home/chris/datasets/coco/val2017/");
+            dataLoader.EnableJpegDecoder();
             dataLoader.SetBatchSize(5);
 
             for (auto i = 0; i < 10; i++)
             {
-                dataLoader.GetNextBatch();
+                dataLoader.RunOnce();
                 dataLoader.Summary();
             }
         });
@@ -121,7 +121,7 @@ void TestDataLoader()
 
             for (auto i = 0; i < 10; i++)
             {
-                dataLoader.GetNextBatch();
+                dataLoader.RunOnce();
                 dataLoader.Summary();
             }
         });

@@ -25,10 +25,7 @@ void TestMNIST()
 		"MnistTest",
 		"Can load and train on MNIST",
 		[]() {
-			DataLoader dataLoader("./mnist.train.db");
-			dataLoader.SetFileSource("/home/chris/datasets/mnist/");
-			dataLoader.SetUseJpegDecoder(false);
-
+			DataLoader dataLoader("./mnist.train.db");			
 			dataLoader.SetBatchSize(5);
 
 			ADContext.Reset();
@@ -64,7 +61,7 @@ void TestMNIST()
 
 			for (auto i = 0; i < 1; i++)
 			{
-				dataLoader.GetNextBatch();
+				dataLoader.RunOnce();
 				dataLoader.Summary();
 
 				ObjDetExampleBatch ex_batch = dataLoader.DequeBatch();
