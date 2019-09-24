@@ -45,7 +45,7 @@ void DefaultTests()
 
 int main()
 {
-    LOG.SetMinLevel(Debug);
+    LOG.SetMinLevel(Info);
 
     DefaultTests();
     TestGPU();
