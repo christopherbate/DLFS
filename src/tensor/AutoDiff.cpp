@@ -3,12 +3,6 @@
 using namespace DLFS;
 using namespace std;
 
-TrackableOp::TrackableOp()
-{
-
-}
-
-
 AutoDiffContext::AutoDiffContext()
 {
 

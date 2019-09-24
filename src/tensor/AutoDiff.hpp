@@ -5,43 +5,11 @@
 #include <memory>
 
 #include "tensor/Tensor.hpp"
+#include "../operations/BaseOperation.hpp"
 
 namespace DLFS
 {
 
-class TrackableOp
-{
-public:
-    TrackableOp();
-
-    virtual void ExecuteForward() = 0;
-    virtual TensorBasePtr GetOutputTensor() = 0;
-    virtual void ExecuteBackward() = 0;
-
-    inline std::string GetName()
-    {
-        return m_name;
-    }
-
-    inline void SetName(const std::string &name)
-    {
-        m_name = name;
-    }
-
-    inline void SetId(uint32_t id)
-    {
-        m_id = id;
-    }
-
-    inline uint32_t GetId()
-    {
-        return m_id;
-    }
-
-private:
-    std::string m_name;
-    uint32_t m_id;
-};
 
 class AutoDiffContext
 {
@@ -49,7 +17,7 @@ public:
     AutoDiffContext();
     ~AutoDiffContext();
 
-    void AddOp(std::shared_ptr<TrackableOp> op)
+    void AddOp(std::shared_ptr<BaseOperation> op)
     {
         op->SetId(m_opTrace.size());
         m_opTrace.push_back(op);
@@ -122,7 +90,7 @@ public:
 
     void CalcGradient(TensorBasePtr scalarTensor)
     {
-        LOG.INFO() << "Calc gradient of f'n with output name : " << scalarTensor->GetName(); 
+        LOG.INFO() << "Calc gradient of f'n with output name : " << scalarTensor->GetName();
         // Initialize the backward operation. This operation sets up the
         // gradient tensor at the top of the chain.
         scalarTensor->InitGradChain();
@@ -148,7 +116,7 @@ public:
     }
 
 private:
-    std::vector<std::shared_ptr<TrackableOp>> m_opTrace;
+    std::vector<std::shared_ptr<BaseOperation>> m_opTrace;
     std::vector<std::shared_ptr<TensorBase>> m_tensorTrace;
 };
 

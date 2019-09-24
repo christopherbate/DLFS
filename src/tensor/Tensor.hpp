@@ -27,7 +27,7 @@
 #include <cuda_runtime.h>
 #include <cudnn.h>
 
-#include "operations/OpsCommon.hpp"
+#include "operations/types.hpp"
 #include "../Logging.hpp"
 
 namespace DLFS
@@ -138,9 +138,8 @@ public:
      * 
      * TODO: CUDA kernel
      */
-    template <typename TargetType>    
+    template <typename TargetType>
     TensorPtr<TargetType> Cast();
-    
 
     /**
     * Initialization Functions
@@ -187,7 +186,12 @@ public:
         return batchPointers;
     }
 
-    inline unsigned char *GetPointer()
+    /**
+     * Returns device pointer
+     * 
+     * No gauruntees on its validity.
+     */
+    inline unsigned char *GetDevicePointer()
     {
         return (unsigned char *)m_deviceBuffer;
     }
@@ -254,8 +258,11 @@ public:
         IncrementBackwardPass();
     }
 
+    /**
+     * Dst will be resized it it is not large enough
+     */
     inline void CopyBufferToHost(std::vector<T> &dst)
-    {        
+    {
         if (dst.size() != GetLinearSize())
         {
             dst.resize(GetLinearSize());
@@ -268,29 +275,48 @@ public:
                    cudaMemcpyDeviceToHost);
     }
 
+    /**
+     * Buffer from must be the correct size.
+     * device buffer must already have been allocated.
+     */
     inline void CopyBufferToDevice(const std::vector<T> &from)
     {
         assert(from.size() * sizeof(T) == GetLinearSize() * sizeof(T));
+        assert(m_deviceBuffer != nullptr);
         checkCudaErrors(cudaMemcpy(m_deviceBuffer, from.data(), GetLinearSize() * sizeof(T),
                                    cudaMemcpyHostToDevice));
     }
 
+    /**
+     * Accepts a vector of (host) buffers and copies them to the host buffer along
+     * the batch dimension.
+     * 
+     * The individual buffers from the host all need to be the size of the 
+     * sub-batch slice on the device.
+     */
     inline void CopyBatchBuffersToDevice(std::vector<std::vector<T>> &from)
     {
         assert((int)from.size() == m_shape[0]);
         int itemSize = m_shape[1] * m_shape[2] * m_shape[3] * sizeof(T);
         for (int i = 0; i < m_shape[0]; i++)
-        {            
+        {
             assert((int)(from[i].size() * sizeof(T)) == itemSize);
-            uint8_t *batchPtr = m_deviceBuffer + itemSize*i;
+            uint8_t *batchPtr = m_deviceBuffer + itemSize * i;
             checkCudaErrors(cudaMemcpy(batchPtr, from[i].data(),
                                        from[i].size() * sizeof(T),
                                        cudaMemcpyHostToDevice));
         }
     }
 
+    /**
+     * Faill a host buffer from the gradient buffer on the 
+     * device. 
+     * 
+     * Destination buffer will be resized if necessary.
+     */
     void CopyGradBufferToHost(std::vector<T> &dst)
     {
+        assert(m_deviceBufferGrad != nullptr);
         if (dst.size() != GetLinearSize())
         {
             dst.resize(GetLinearSize());
@@ -305,10 +331,23 @@ public:
      */
     TensorPtr<T> Convolve(TensorPtr<T> filter, Pad2d padding = {1, 1},
                           Stride2d = {1, 1});
+
+    /**
+    * Addition / Subtraction
+    * 
+    * This function is Implemented with the TensorOp operation.
+    */
     TensorPtr<T> Add(TensorPtr<T> rhs);
     TensorPtr<T> Power(T scalar);
 
     friend TensorPtr<T> operator+(const TensorPtr<T> &lhs,
+                                  const TensorPtr<T> &rhs)
+    {
+        TensorPtr<T> out = lhs->Add(rhs);
+        return out;
+    }
+
+    friend TensorPtr<T> operator-(const TensorPtr<T> &lhs,
                                   const TensorPtr<T> &rhs)
     {
         TensorPtr<T> out = lhs->Add(rhs);

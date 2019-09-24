@@ -18,13 +18,13 @@ void TestTensor()
             Tensor<float> tensor;
             tensor.SetShape(1, 10, 10, 3);
 
-            QTEqual(tensor.GetPointer(), nullptr);
+            QTEqual(tensor.GetDevicePointer(), nullptr);
             QTEqual(tensor.GetPitch(), (size_t)4);
 
             tensor.AllocateIfNecessary();
 
             QTEqual(tensor.GetExpectedSize(), 4 * 10 * 10 * 3);
-            QuickTest::NotEqual(tensor.GetPointer(), nullptr);
+            QuickTest::NotEqual(tensor.GetDevicePointer(), nullptr);
         });
 
     TestRunner::GetRunner()->AddTest(
@@ -33,15 +33,22 @@ void TestTensor()
         []() {
             ADContext.Reset();
 
+            // First api
+
             TensorPtr<float> tensor = std::make_shared<Tensor<float>>();
             tensor->SetShape(1, 128, 128, 3);
 
-            QuickTest::Equal(tensor->GetPointer(), nullptr);
+            QuickTest::Equal(tensor->GetDevicePointer(), nullptr);
             QuickTest::Equal(tensor->GetPitch(), 4);
 
             tensor->AllocateIfNecessary();
 
-            QuickTest::NotEqual(tensor->GetPointer(), nullptr);
+            QuickTest::NotEqual(tensor->GetDevicePointer(), nullptr);
+
+            // AD Api
+            TensorPtr<float> tensor2 = ADContext.CreateTensor<float>(TensorShape({1, 128, 128, 3}),
+                                                                     "TestTensor", 0.1, false);
+            QuickTest::NotEqual(tensor2->GetDevicePointer(), nullptr);
         });
 
     TestRunner::GetRunner()->AddTest(
@@ -56,7 +63,7 @@ void TestTensor()
 
             vector<float> buffer(tensor->GetLinearSize());
 
-            cudaMemcpy(buffer.data(), tensor->GetPointer(),
+            cudaMemcpy(buffer.data(), tensor->GetDevicePointer(),
                        tensor->GetExpectedSize(), cudaMemcpyDeviceToHost);
 
             for (auto val : buffer)
@@ -173,7 +180,8 @@ void TestTensor()
             vector<float> buffer;
             convertedTensor->CopyBufferToHost(buffer);
 
-            for(auto v : buffer){
+            for (auto v : buffer)
+            {
                 QTEqual(v, 1.0f);
             }
         });

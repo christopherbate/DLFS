@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tensor/AutoDiff.hpp"
+#include "BaseOperation.hpp"
 #include "tensor/Tensor.hpp"
 #include "GPU.hpp"
 
@@ -29,7 +29,7 @@ enum PointwiseOpType : uint32_t
 };
 
 template <typename T>
-class TensorOp : public TrackableOp
+class TensorOp : public BaseOperation
 {
 public:
     TensorOp(PointwiseOpType opType)
@@ -139,13 +139,13 @@ private:
             m_tensorOpDesc,
             &m_scaleFactors[0],
             m_inputA->GetTensorDesc(),
-            m_inputA->GetPointer(),
+            m_inputA->GetDevicePointer(),
             &m_scaleFactors[1],
             m_inputB->GetTensorDesc(),
-            m_inputB->GetPointer(),
+            m_inputB->GetDevicePointer(),
             &m_scaleFactors[2],
             m_output->GetTensorDesc(),
-            m_output->GetPointer()));
+            m_output->GetDevicePointer()));
 
         cudaDeviceSynchronize();
     }
@@ -200,9 +200,9 @@ private:
         assert(m_output != nullptr);
 
         LaunchPowerKernel(CustomOpDataType::Float,
-                          m_inputA->GetPointer(),
+                          m_inputA->GetDevicePointer(),
                           m_inputA->GetLinearSize(),
-                          &m_power, m_output->GetPointer());                          
+                          &m_power, m_output->GetDevicePointer());                          
         cudaDeviceSynchronize();
     }
 
@@ -229,10 +229,10 @@ private:
         tmp->AllocateIfNecessary();
 
         LaunchPowerKernel(CustomOpDataType::Float,
-                          m_inputA->GetPointer(),
+                          m_inputA->GetDevicePointer(),
                           m_inputA->GetLinearSize(),
                           &dPower,
-                          tmp->GetPointer());
+                          tmp->GetDevicePointer());
 
         checkCudaErrors(cudnnSetOpTensorDescriptor(m_tensorOpDesc,
                                                    CUDNN_OP_TENSOR_MUL,
@@ -245,7 +245,7 @@ private:
                     m_tensorOpDesc,
                     &blendFactors[0],
                     tmp->GetTensorDesc(),
-                    tmp->GetPointer(),
+                    tmp->GetDevicePointer(),
                     &blendFactors[1],
                     m_output->GetTensorDesc(),
                     m_output->GetGradPointer(),

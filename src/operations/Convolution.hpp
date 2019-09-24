@@ -2,19 +2,18 @@
 
 #include "tensor/AutoDiff.hpp"
 #include "tensor/Tensor.hpp"
+#include "operations/BaseOperation.hpp"
 
 #include <array>
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <memory>
 
-#include "operations/OpsCommon.hpp"
-
 namespace DLFS
 {
 
 template <typename T>
-class Convolution : public TrackableOp
+class Convolution : public BaseOperation
 {
 public:
     Convolution();
@@ -64,7 +63,7 @@ private:
      * depending on the compute capability and size of 
      * the tensors. Right now we have the algs fixed,
      * but in the future these should be selected dynamically.
-     */    
+     */
     cudnnConvolutionFwdAlgo_t m_convFwdAlg;
     cudnnConvolutionBwdFilterAlgo_t m_convBwdFilterAlg;
     cudnnConvolutionBwdDataAlgo_t m_convBwdDataAlg;

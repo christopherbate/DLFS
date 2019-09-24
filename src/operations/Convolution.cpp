@@ -75,9 +75,9 @@ void Convolution<T>::ExecuteForward()
     assert(m_output != nullptr);
     assert(m_workspaceBuffer == NULL);
     assert(m_workspaceSize == 0);
-    assert(m_features->GetPointer() != nullptr);
-    assert(m_filter->GetPointer() != nullptr);
-    assert(m_output->GetPointer() != nullptr);
+    assert(m_features->GetDevicePointer() != nullptr);
+    assert(m_filter->GetDevicePointer() != nullptr);
+    assert(m_output->GetDevicePointer() != nullptr);
 
     size_t wsSize = 0;
 
@@ -94,11 +94,11 @@ void Convolution<T>::ExecuteForward()
         checkCudaErrors(cudaMalloc(&devWs, wsSize));
 
     checkCudaErrors(cudnnConvolutionForward(GPUContext.GetCUDNNHandle(), &m_scaling[0],
-                                            m_features->GetTensorDesc(), m_features->GetPointer(),
-                                            m_filter->GetFilterDesc(), m_filter->GetPointer(),
+                                            m_features->GetTensorDesc(), m_features->GetDevicePointer(),
+                                            m_filter->GetFilterDesc(), m_filter->GetDevicePointer(),
                                             m_convDesc, m_convFwdAlg, devWs,
                                             wsSize, &m_scaling[1],
-                                            m_output->GetTensorDesc(), m_output->GetPointer()));
+                                            m_output->GetTensorDesc(), m_output->GetDevicePointer()));
     if (wsSize > 0)
         checkCudaErrors(cudaFree(devWs));
 
@@ -108,8 +108,8 @@ void Convolution<T>::ExecuteForward()
 template <typename T>
 void Convolution<T>::ExecuteBackward()
 {
-    assert(m_features->GetPointer() != nullptr);
-    assert(m_filter->GetPointer() != nullptr);
+    assert(m_features->GetDevicePointer() != nullptr);
+    assert(m_filter->GetDevicePointer() != nullptr);
 
     size_t wsSize = 0;
     unsigned char *devWs = NULL;
@@ -139,7 +139,7 @@ void Convolution<T>::ExecuteBackward()
             checkCudaErrors(cudaMalloc(&devWs, wsSize));
 
         checkCudaErrors(cudnnConvolutionBackwardFilter(GPUContext.GetCUDNNHandle(), &blendFactors[0],
-                                                       m_features->GetTensorDesc(), m_features->GetPointer(),
+                                                       m_features->GetTensorDesc(), m_features->GetDevicePointer(),
                                                        m_output->GetTensorDesc(),
                                                        m_output->GetGradPointer(),
                                                        m_convDesc, m_convBwdFilterAlg, devWs,
@@ -170,7 +170,7 @@ void Convolution<T>::ExecuteBackward()
         LOG.INFO() << "Execuing cudnn ConvBwdData kernel " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
 
         checkCudaErrors(cudnnConvolutionBackwardData(GPUContext.GetCUDNNHandle(), &blendFactors[0],
-                                                     m_filter->GetFilterDesc(), m_filter->GetPointer(),
+                                                     m_filter->GetFilterDesc(), m_filter->GetDevicePointer(),
                                                      m_output->GetTensorDesc(), m_output->GetGradPointer(),
                                                      m_convDesc, m_convBwdDataAlg,
                                                      devWs, wsSize, &blendFactors[1], m_features->GetTensorDesc(),
