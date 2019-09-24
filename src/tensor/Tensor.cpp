@@ -119,13 +119,13 @@ void Tensor<T>::Allocate()
     m_bufferSize = GetLinearSize() * sizeof(T);
 
     LOG.DEBUG() << "Allocating tensor " << GetName() << ":" << GetId()
-                << " " << (float)m_bufferSize / 1024000.0 << " Mb";
+                << " " << (float)m_bufferSize / 1024.0 << " KB";
     checkCudaErrors(cudaMalloc(&m_deviceBuffer, m_bufferSize));
 
     if (GetGradFlag())
     {
         LOG.DEBUG() << "Allocating grad tensor " << GetName() << ":" << GetId()
-                    << " " << (float)m_bufferSize / 1024000.0 << " Mb";
+                    << " " << (float)m_bufferSize / 1024.0 << " KB";
         checkCudaErrors(cudaMalloc(&m_deviceBufferGrad, m_bufferSize));
     }
 }
@@ -185,28 +185,10 @@ TensorPtr<T> Tensor<T>::Convolve(TensorPtr<T> filter,
     return outputTensor;
 }
 
-/**
- * Addition / Subtraction
- * 
- * This function supports simple broadcasting. It looks over the dimensions.
- * After the first dimension where the numbers disagree, they must agree.
- */
+
 template <typename T>
 TensorPtr<T> Tensor<T>::Add(TensorPtr<T> rhs)
 {
-    // Check broadcasting
-    // bool differ = false;
-    // auto rhsShape = rhs->GetShape();
-    // for(unsigned int i = 0; i < 4; i++){
-    //     if(rhsShape[i] != m_shape[i]){
-    //         if(differ){
-    //             throw DLFSError("Broadcasting failure, " + m_name + ", " + rhs->GetName());
-    //         } else {
-    //             differ = true;
-    //         }
-    //     }
-    // }
-
     shared_ptr<TensorOp<T>> addOp =
         make_shared<TensorOp<T>>(PW_ADD);
 
