@@ -101,77 +101,6 @@ does not need to re-occur. See the tutorial program `01_data_loading.cpp` for ex
 
 ## Models
 
-Models are defined in an object-oriented manner, much like in PyTorch, and use computation primitives defined in the `src/layers` folder. The semantics closely follows PyTorch. `Model` and `Layer` are abstract base classes. You define strings of operations which are executed at run-time. All error-checking for e.g. dimension matching also occurs at runtime.
-
-The `forward` function computes the forward output, and the backward information is maintained within the model.
-
-
-Here we will define a simple dense bounding box predictor:
-
-```
-#include "layers/ConvLayer"
-
-class SimpleBackbone : public Layer {
-public:
-    SimpleBackbone(){
-
-    }
-
-    forward(Layer *prevLayer){        
-        Layer *out = prevLayer
-        for(layer : m_set1){
-            out = layer.forward(out)
-        }
-        
-        out = m_adder.forward(out, prevLayer)
-
-        for(layer : m_set2){
-            out = layer.forward(out)
-        }
-        return out;
-    }
-
-private:
-    std::vector<ConvLayer> m_set1;
-    std::vector<ConvLayer> m_set2;
-};
-
-class AnchorRegression: public Layer {
-public:
-    AnchorRegression(){        
-    }
-
-    forward(Layer *prevLayer){
-        for(layer : m_set1){
-            prevLayer = layer.forward(prevLayer)
-        }
-    }
-private:
-    std::vector<ConvLayer> m_layers;
-}
-
-
-class DenseBoxModel : public Model {
-public:
-    DenseBoxModel(){
-
-    }
-
-    forward(Layer *prevLayer) {
-        bbOut = m_backbone.forward(m_inputLayer);
-        m_anchorLayer.forward(bbOut);
-
-        return m_
-    }
-
-private:
-    InputLayer m_inputLayer;
-    SimpleBackbone m_backbone;
-    AnchorRegression m_anchorLayer;
-};
-
-```
-
 
 ## Training
 
@@ -191,4 +120,8 @@ Training provides a single optimizer: SGD with momentum, which is the most commo
 
 ## Inference Service
 
-## 
+## TODO:
+
+1. Tensor data types for cudnn initialized always to float... this obviously needs to change.
+2. AD Context needs a mutex(es) on the operation and tensorptr vectors
+
