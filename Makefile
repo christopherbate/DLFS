@@ -16,7 +16,8 @@ OBJDIR := .build
 FLATBUFFERS := src/data_loading/dataset_generated.h
 
 DIRS := bin $(OBJDIR) $(OBJDIR)/data_loading $(OBJDIR)/tensor \
-		$(OBJDIR)/utils $(OBJDIR)/tests $(OBJDIR)/operations
+		$(OBJDIR)/utils $(OBJDIR)/tests $(OBJDIR)/operations \
+		$(OBJDIR)/threadpool
 
 # Object definitions
 _NON_MAIN_OBJS =  operations/PointwiseKernels.o \
@@ -24,6 +25,7 @@ _NON_MAIN_OBJS =  operations/PointwiseKernels.o \
 			     data_loading/LocalSource.o data_loading/DataLoader.o \
 				 data_loading/ExampleSource.o  tensor/TensorList.o \
 				 operations/Convolution.o tensor/AutoDiff.o \
+				 threadpool/ThreadPool.o
 				
 
 NON_MAIN_OBJS = $(addprefix $(OBJDIR)/, $(_NON_MAIN_OBJS))
