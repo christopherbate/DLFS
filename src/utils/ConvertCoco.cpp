@@ -101,19 +101,29 @@ int main(int argc, char **argv)
     // Build images
     auto imgs = input_json["images"];
     vector<flatbuffers::Offset<Example>> ex_vector;
+    unsigned int skip_count = 0;
+    unsigned int total_count = 0;
     for (auto it = imgs.begin(); it != imgs.end(); it++)
     {
         uint64_t imgId = (*it)["id"];
+        if(imageIdToAnns[imgId].size() == 0){
+            cout << "WARNING: skipping imageId " << imgId << " as it has no annotations." << endl;
+            skip_count++;
+            continue;
+        }
         string file_name = (*it)["file_name"];
         auto fb_file_name = builder.CreateString(file_name);
         auto fb_anns = builder.CreateVector(imageIdToAnns[imgId]);
 
         auto img = CreateExample(builder, fb_file_name, imgId, fb_anns);
         ex_vector.push_back(img);
+        total_count++;
     }
     auto fb_examples = builder.CreateVectorOfSortedTables(&ex_vector);
 
     cout << "Serialized images in " << Tick() << " msec." << endl;
+
+    cout << "Total images : " << total_count <<" Skipped images " << skip_count << endl;
 
     DatasetBuilder datasetBuilder(builder);
     datasetBuilder.add_id(0);
