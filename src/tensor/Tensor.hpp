@@ -61,7 +61,16 @@ class TensorBase {
 
     inline void IncrementBackwardPass() { m_numBackPasses++; }
 
+    inline std::string PrintShape() {
+        std::string shapeMsg = "(";
+        for (auto d : m_shape)
+            shapeMsg += std::to_string(d) + ", ";
+        shapeMsg += ")";
+        return shapeMsg;
+    }
+
   protected:
+    TensorShape m_shape;
     bool m_calcGrad{false};
     uint32_t m_id{0};
     std::string m_name{"UnnamedTensor"};
@@ -173,14 +182,6 @@ class Tensor : public TensorBase,
     inline cudnnTensorDescriptor_t GetTensorDesc() { return m_tensorDesc; }
 
     inline cudnnFilterDescriptor_t GetFilterDesc() { return m_filterDesc; }
-
-    inline std::string PrintShape() {
-        std::string shapeMsg = "(";
-        for (auto d : m_shape)
-            shapeMsg += std::to_string(d) + ", ";
-        shapeMsg += ")";
-        return shapeMsg;
-    }
 
     std::string PrintTensor(bool grad = false, bool breakChannels = true);
 
@@ -298,8 +299,6 @@ class Tensor : public TensorBase,
     TensorPtr<T> ReLU();
 
   private:
-    TensorShape m_shape;
-
     cudnnDataType_t m_dataType;
 
     cudnnTensorDescriptor_t m_tensorDesc{nullptr};
