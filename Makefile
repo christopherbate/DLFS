@@ -35,7 +35,7 @@ CONVERT_COCO_OBJS = .build/utils/ConvertCoco.o $(NON_MAIN_OBJS)
 CONVERT_MNIST_OBJS = .build/utils/ConvertMnist.o $(NON_MAIN_OBJS)
 
 _TEST_OBJS = UnitTest.o TestTensor.o TestAutoDiff.o TestGPU.o TestDataLoader.o \
-			TestConv.o TestTensorOp.o TestMNIST.o TestFilter.o TestImage.o TestSoftmax.o \
+			TestConv.o TestTensorOp.o TestMNIST.o TestImage.o TestSoftmax.o \
 			TestActivation.o
 			
 UNIT_TEST_OBJS = $(addprefix $(OBJDIR)/tests/, $(_TEST_OBJS)) $(NON_MAIN_OBJS)
