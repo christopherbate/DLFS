@@ -101,6 +101,13 @@ class AutoDiffContext {
         }
     }
 
+    /**
+     * Prints out all information fore debuggin:
+     * - Tensor and Op Traces
+     * - Memory profile
+     */
+    std::string Print();
+
   private:
     std::vector<std::shared_ptr<BaseOperation>> m_opTrace;
     std::vector<std::shared_ptr<TensorBase>> m_tensorTrace;
