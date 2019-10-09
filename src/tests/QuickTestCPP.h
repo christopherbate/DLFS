@@ -118,7 +118,8 @@ public:
         {
             std::stringstream ss;
             ss << "Test Failure at " << file << ":" << line
-               << "(AlmostEqual)" << (a-b) << " > " << eps;
+               << ": " << a << " != " << b << " "
+               << " (AlmostEqual)" << (a-b) << " > " << eps;
             throw QuickTestError(ss.str());
         }
     }
