@@ -60,11 +60,7 @@ void ReadImages(std::ifstream &stream_imgs,
     for (unsigned int i = 0; i < num_images; i++)
     {
         buffer_imgs[i].resize(img_size);
-        stream_imgs.read((char *)buffer_imgs[i].data(), img_size);
-        for (auto &it : buffer_imgs[i])
-        {
-            it = __builtin_bswap32(it);
-        }
+        stream_imgs.read((char *)buffer_imgs[i].data(), img_size);       
         if (!stream_imgs)
         {
             throw std::runtime_error("Failed to read image file.");
