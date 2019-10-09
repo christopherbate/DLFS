@@ -55,6 +55,9 @@ int main()
     TestTensorOp();
     TestDataLoader();
     TestMNIST();
+    TestSoftmax();
+    TestActivation();
+    TestImage();
 
     TestRunner::GetRunner()->Run();
     TestRunner::GetRunner()->PrintSummary();

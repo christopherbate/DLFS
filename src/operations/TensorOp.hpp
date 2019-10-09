@@ -25,7 +25,7 @@ enum PointwiseOpType : uint32_t
     PW_MAX = CUDNN_OP_TENSOR_MAX,
     PW_MIN = CUDNN_OP_TENSOR_MIN,
     PW_SQRT = CUDNN_OP_TENSOR_SQRT,
-    PW_POW
+    PW_POW    
 };
 
 template <typename T>
