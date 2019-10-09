@@ -45,27 +45,48 @@ template <typename T> void Tensor<T>::SetShape(int b, int h, int w, int c) {
     FillCUDNNDesc();
 }
 
-template <typename T> std::string Tensor<T>::PrintTensor() {
+template <typename T>
+std::string Tensor<T>::PrintTensor(bool grad, bool breakChannels) {
     std::vector<T> buffer(this->GetLinearSize());
     std::ostringstream ss;
-    CopyBufferToHost(buffer);
-    ss.precision(2);
+    if (!grad) {
+        CopyBufferToHost(buffer);
+    } else {
+        CopyGradBufferToHost(buffer);
+    }
+
+    ss.precision(3);
+
+    int imgArea = m_shape[1] * m_shape[2] * m_shape[3];
+    int rowArea = m_shape[2] * m_shape[3];
 
     // We loop over batches, then channels, printing the 2d arrays
+    ss << "\n";
     for (int j = 0; j < m_shape[0]; j++) {
         for (int ch = 0; ch < m_shape[3]; ch++) {
-            ss << "["
-               << "\n";
+            ss << "[";
+
+            if (breakChannels)
+                ss << "\n";
+
             for (int y = 0; y < m_shape[1]; y++) {
+                ss << "[";
                 for (int x = 0; x < m_shape[2]; x++) {
-                    int idx = j * GetExpectedSizeWithinBatch() +
-                              y * (m_shape[3] * m_shape[2]) + x * m_shape[3] +
-                              ch;
-                    ss << std::fixed << buffer[idx] << ", ";
+                    int idx = j * imgArea + y * (rowArea) + x * m_shape[3] + ch;
+                    ss << std::fixed << buffer[idx] << ",";
+                }
+                ss << "]";
+                if (breakChannels) {
+                    ss << "\n";
                 }
             }
-            ss << "], \n";
+            ss << "]";
+            if(breakChannels){
+                ss<<"\n";
+            }
         }
+         
+        ss << "\n";
     }
     return ss.str();
 }

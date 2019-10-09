@@ -182,7 +182,7 @@ class Tensor : public TensorBase,
         return shapeMsg;
     }
 
-    std::string PrintTensor();
+    std::string PrintTensor(bool grad = false, bool breakChannels = true);
 
     inline size_t GetPitch() { return m_pitch; }
 
