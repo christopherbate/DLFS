@@ -114,8 +114,6 @@ void Convolution<T>::ExecuteBackward()
     size_t wsSize = 0;
     unsigned char *devWs = NULL;
 
-    m_features->IncrementBackwardPass();
-
     T blendFactors[2] = {1, 1};
 
     // Get grad with respect to filter.
