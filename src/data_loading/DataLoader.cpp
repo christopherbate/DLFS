@@ -119,7 +119,7 @@ void DataLoader::RunOnce()
     // either decode jpegs or directly copy
     if (m_useJpegDecoder)
     {
-        m_imgLoader.DecodeJPEG(imgBufs, imgBatchTensor);
+        m_imgLoader.BatchDecodeJPEG(imgBufs, imgBatchTensor);
     }
     else
     {

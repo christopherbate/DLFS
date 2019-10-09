@@ -5,6 +5,8 @@
 #include "../Logging.hpp"
 #include "../tensor/Tensor.hpp"
 
+#include "external/lodepng/lodepng.h"
+
 #include <cuda_runtime.h>
 #include <cassert>
 
@@ -17,10 +19,20 @@
 using namespace DLFS;
 using namespace std;
 
+/**
+ * These are the allocators for nvjpeg backend.
+ */
+int dev_malloc(void **p, size_t s) { return (int)cudaMalloc(p, s); }
+int dev_free(void *p) { return (int)cudaFree(p); }
+
 ImageLoader::ImageLoader()
 {
 	m_outputFormat = NVJPEG_OUTPUT_RGBI;
-	checkCudaErrors(nvjpegCreate(NVJPEG_BACKEND_DEFAULT, NULL, &m_jpegHandle));
+
+	nvjpegDevAllocator_t dev_allocator = {&dev_malloc, &dev_free};
+	checkCudaErrors(nvjpegCreate(NVJPEG_BACKEND_DEFAULT, &dev_allocator,
+								 &m_jpegHandle));
+
 	checkCudaErrors(nvjpegJpegStateCreate(m_jpegHandle, &m_jpegState));
 	checkCudaErrors(cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking));
 }
@@ -41,9 +53,13 @@ void ImageLoader::GetJPEGInfo(const vector<std::vector<uint8_t>> &dataBuffers,
 	assert(dataBuffers.size() == imgInfoBufs.size());
 	for (unsigned int i = 0; i < dataBuffers.size(); i++)
 	{
-		checkCudaErrors(nvjpegGetImageInfo(m_jpegHandle, (unsigned char *)dataBuffers[i].data(), dataBuffers[i].size(),
-										   &imgInfoBufs[i].channels, &imgInfoBufs[i].subsampling,
-										   imgInfoBufs[i].widths, imgInfoBufs[i].heights));
+		checkCudaErrors(nvjpegGetImageInfo(m_jpegHandle,
+										   (unsigned char *)dataBuffers[i].data(),
+										   dataBuffers[i].size(),
+										   &imgInfoBufs[i].channels,
+										   &imgInfoBufs[i].subsampling,
+										   imgInfoBufs[i].widths,
+										   imgInfoBufs[i].heights));
 	}
 }
 
@@ -92,9 +108,9 @@ void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos, TensorPtr<ui
  * Outputs:
  * 	Pointer to CUDA memory structs
  */
-std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &buffers,
-											   TensorPtr<uint8_t> imgBatchTensor,
-											   unsigned int maxHostThread)
+std::vector<ImageInfo> ImageLoader::BatchDecodeJPEG(const vector<vector<uint8_t>> &buffers,
+													TensorPtr<uint8_t> imgBatchTensor,
+													unsigned int maxHostThread)
 {
 	std::vector<size_t> imgLengths;
 	std::vector<ImageInfo> imgInfoBufs(buffers.size());
@@ -129,6 +145,47 @@ std::vector<ImageInfo> ImageLoader::DecodeJPEG(const vector<vector<uint8_t>> &bu
 	checkCudaErrors(cudaStreamSynchronize(m_stream));
 
 	return imgInfoBufs;
+}
+
+/**
+ * Decodes a single JPEG.
+ * 
+ * Args: 
+ * 	buffers
+ *  tensor
+ * 
+ * Outputs:
+ * 	Pointer to CUDA memory structs
+ */
+void ImageLoader::DecodeJPEG(const vector<uint8_t> &imgData,
+							 TensorPtr<uint8_t> tensor)
+{
+	ImageInfo imgInfo;
+
+	checkCudaErrors(nvjpegGetImageInfo(m_jpegHandle,
+									   (unsigned char *)imgData.data(),
+									   imgData.size(),
+									   &imgInfo.channels,
+									   &imgInfo.subsampling,
+									   imgInfo.widths, imgInfo.heights));
+
+	TensorShape tensorShape = {1, imgInfo.heights[0], imgInfo.widths[0], 3};
+	tensor->SetShape(tensorShape);
+	tensor->AllocateIfNecessary();
+
+	/**
+	 * Note: this configuration is specific to OUTPUT_RGBI
+	 */
+	imgInfo.channels = 1;
+	imgInfo.nvImage.pitch[0] = 3 * tensor->GetShape()[2];
+	imgInfo.nvImage.channel[0] = tensor->GetDevicePointer();
+
+	nvjpegDecode(m_jpegHandle, m_jpegState,
+				 imgData.data(), imgData.size(),
+				 m_outputFormat,
+				 &imgInfo.nvImage, m_stream);
+
+	checkCudaErrors(cudaStreamSynchronize(m_stream));
 }
 
 /**
@@ -290,4 +347,29 @@ int DLFS::writeBMPi(const char *filename, const unsigned char *d_RGB, int pitch,
 
 	fclose(outfile);
 	return 0;
+}
+
+void DLFS::WriteImageTensorBMP(const char *filename, TensorPtr<uint8_t> imageTensor)
+{
+	auto shape = imageTensor->GetShape();
+	writeBMPi(filename, imageTensor->GetDevicePointer(), 3 * shape[2], shape[2], shape[1]);
+}
+
+void DLFS::WriteImageTensorPNG(const std::string &filename, TensorPtr<uint8_t> imageTensor)
+{	
+	vector<uint8_t> buffer;
+	imageTensor->CopyBufferToHost(buffer);
+
+	auto shape = imageTensor->GetShape();
+
+	
+	if(shape[3] == 3){
+		// Case 1 - RGB (8bit per color) encode 
+		lodepng_encode24_file(filename.c_str(), buffer.data(), shape[2], shape[1]);
+	} else if (shape[3] == 1){
+		// Case 2 - Greyscale encode 8bit one color
+		lodepng_encode_file(filename.c_str(), buffer.data(), shape[2], shape[1], LCT_GREY,8);
+	} else {
+		throw std::runtime_error("To PNG-encode images, they must have 3 channels (RGB) or 1 channel (gray)");
+	}
 }

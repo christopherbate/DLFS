@@ -36,7 +36,7 @@ void TestDataLoader()
             Timer timer;
             timer.tick_us();
 
-            QuickTest::Equal(annSrc.GetNumExamples(), (unsigned int)5000);
+            QuickTest::Equal(annSrc.GetNumExamples(), (unsigned int)4952);
 
             for (unsigned int i = 0; i < 1000; i++)
             {
@@ -70,7 +70,7 @@ void TestDataLoader()
             timer.tick();
             for (auto i = 0; i < 2; i++)
             {
-                imgLoader.DecodeJPEG(data, imgBatchTensor, 8);
+                imgLoader.BatchDecodeJPEG(data, imgBatchTensor, 8);
                 avgTime += timer.tick();
             }
 

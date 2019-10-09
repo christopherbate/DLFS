@@ -39,23 +39,29 @@ struct ImageInfo
 class ImageLoader
 {
 public:
-    /**
-     * batchSize - how many images to decode at one time.
-     * maxHostThread - how many cpu threads to spawn during decoding.
-     * padToMax - whether to zero-pad all images out the largest image size.
-     */
     ImageLoader();
     ~ImageLoader();
 
     /**
-     * This accepts a vector of buffers containing the binary data of the images.
-     * It also a single Tensor (uint8_t type). 
-     * The images are batch decoded and placed into imgBatchTensor.
+     * buffer - batch of images read in binary form from .jpg files
+     * imgBatchTensor - tensor (not necessarily allocated yet) where the batch will be stored.
+     * maxHostThread - number of max CPU threads
+     * 
+     * returns:
+     *  vector of ImageInfo
      */
-    std::vector<ImageInfo> DecodeJPEG(const std::vector<std::vector<uint8_t>> &buffer,
-                                      TensorPtr<uint8_t> imgBatchTensor,
-                                      unsigned int maxHostThread = 4);
+    std::vector<ImageInfo> BatchDecodeJPEG(const std::vector<std::vector<uint8_t>> &buffer,
+                                           TensorPtr<uint8_t> imgBatchTensor,
+                                           unsigned int maxHostThread = 4);
 
+    /**
+     * Decodes a single jpeg. 
+     * For batched images, see above is much more efficient.
+     * 
+     * tensor - does not need to be allocated.
+     */
+    void DecodeJPEG(const std::vector<uint8_t> &imgData,
+                    TensorPtr<uint8_t> tensor);
 
     static const char *SamplingTypeString(nvjpegChromaSubsampling_t type);
 
@@ -67,11 +73,25 @@ private:
     nvjpegHandle_t m_jpegHandle;
     nvjpegJpegState_t m_jpegState;
     nvjpegOutputFormat_t m_outputFormat;
-    cudaStream_t m_stream;    
+    cudaStream_t m_stream;
 };
 
 int writeBMPi(const char *filename, const unsigned char *d_RGB, int pitch,
               int width, int height);
+
+/**
+ * Saves a tensor as a BMP 
+ * Must have 3 channels (RGB)
+ */
+void WriteImageTensorBMP(const char *filename, TensorPtr<uint8_t> imageTensor);
+
+/**
+ * Saves a tensor as a PNG
+ * 
+ * Automatically performs greyscale conversion 
+ * if single-channel
+ */
+void WriteImageTensorPNG(const std::string &filename, TensorPtr<uint8_t> imageTensor);
 
 } // namespace DLFS
 
