@@ -1,42 +1,32 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
-#include "tensor/Tensor.hpp"
 #include "../operations/BaseOperation.hpp"
+#include "tensor/Tensor.hpp"
 
-namespace DLFS
-{
+namespace DLFS {
 
-
-class AutoDiffContext
-{
-public:
+class AutoDiffContext {
+  public:
     AutoDiffContext();
     ~AutoDiffContext();
 
-    void AddOp(std::shared_ptr<BaseOperation> op)
-    {
+    void AddOp(std::shared_ptr<BaseOperation> op) {
         op->SetId(m_opTrace.size());
         m_opTrace.push_back(op);
     }
 
-    void Reset()
-    {
+    void Reset() {
         m_opTrace.clear();
         m_tensorTrace.clear();
     }
 
-    inline unsigned int GetOpTraceSize()
-    {
-        return m_opTrace.size();
-    }
+    inline unsigned int GetOpTraceSize() { return m_opTrace.size(); }
 
-    template <typename T>
-    std::shared_ptr<Tensor<T>> CreateTensor()
-    {
+    template <typename T> std::shared_ptr<Tensor<T>> CreateTensor() {
         TensorPtr<T> p = std::make_shared<Tensor<T>>();
         p->SetId(m_tensorTrace.size());
         m_tensorTrace.emplace_back(p);
@@ -44,9 +34,9 @@ public:
     }
 
     template <typename T>
-    std::shared_ptr<Tensor<T>> CreateTensor(TensorShape shape, const std::string &name,
-                                            T constValueFill, bool grad = true)
-    {
+    std::shared_ptr<Tensor<T>>
+    CreateTensor(TensorShape shape, const std::string &name, T constValueFill,
+                 bool grad = true) {
         TensorPtr<T> p = std::make_shared<Tensor<T>>();
         p->SetGradFlag(grad);
         p->SetShape(shape);
@@ -60,10 +50,9 @@ public:
     }
 
     template <typename T>
-    std::shared_ptr<Tensor<T>> CreateFilter(int inChannel, int outChannel, int filterSize,
-                                            const std::string &name,
-                                            T constValueFill, bool grad = true)
-    {
+    std::shared_ptr<Tensor<T>>
+    CreateFilter(int inChannel, int outChannel, int filterSize,
+                 const std::string &name, T constValueFill, bool grad = true) {
         TensorPtr<T> p = std::make_shared<Tensor<T>>();
         p->SetGradFlag(grad);
         p->SetFilterShape(inChannel, outChannel, filterSize, filterSize);
@@ -77,36 +66,33 @@ public:
     }
 
     void CalcGradient(TensorBasePtr scalarTensor,
-                      std::vector<TensorBasePtr> parameters)
-    {
+                      std::vector<TensorBasePtr> parameters) {
         LOG.INFO() << "Trainable parameters with names : ";
-        for (auto p : parameters)
-        {
+        for (auto p : parameters) {
             LOG.INFO() << p->GetName() << ":" << p->GetId();
         }
 
         CalcGradient(scalarTensor);
     }
 
-    void CalcGradient(TensorBasePtr scalarTensor)
-    {
-        LOG.INFO() << "Calc gradient of f'n with output name : " << scalarTensor->GetName();
+    void CalcGradient(TensorBasePtr scalarTensor) {
+        LOG.INFO() << "Calc gradient of f'n with output name : "
+                   << scalarTensor->GetName();
         // Initialize the backward operation. This operation sets up the
         // gradient tensor at the top of the chain.
         scalarTensor->InitGradChain();
 
         // Cycle through the operations in reverse order.
         LOG.INFO() << "Conducting backward pass:";
-        for (auto opIter = m_opTrace.rbegin(); opIter != m_opTrace.rend(); opIter++)
-        {
+        for (auto opIter = m_opTrace.rbegin(); opIter != m_opTrace.rend();
+             opIter++) {
             auto op = *opIter;
             LOG.INFO() << op->GetName() << ":" << op->GetId();
 
             // Skip this op if it's output hasn't seen a backward pass.
             // this means that this op is somehow disconnected or upstream
             // from scalarTensor
-            if (op->GetOutputTensor()->GetBackwardPasses() < 1)
-            {
+            if (op->GetOutputTensor()->GetBackwardPasses() < 1) {
                 LOG.INFO() << "Skipping this op.";
                 continue;
             }
@@ -115,7 +101,7 @@ public:
         }
     }
 
-private:
+  private:
     std::vector<std::shared_ptr<BaseOperation>> m_opTrace;
     std::vector<std::shared_ptr<TensorBase>> m_tensorTrace;
 };
