@@ -22,31 +22,155 @@ using namespace DLFS;
 void TestMNIST() {
     TestRunner::GetRunner()->AddTest(
         "MnistTest", "Can load and train on MNIST", []() {
+            Timer batchTimer;
+
             DataLoader dataLoader("./mnist.train.db");
             dataLoader.SetBatchSize(5);
 
             ADContext.Reset();
 
             TensorPtr<float> f1 = ADContext.CreateFilter<float>(
-                1, 3, 3, "conv1_filter", 0.1, true);
+                1, 4, 3, "conv1_filter", 0.01, false);
+
+            LOG.INFO() << "Filter size: " << f1->GetLinearSize();
+            cout << endl;
+
+            /*size 3*3*1*4*/
+            vector<float> f1_init = {/* first filter */
+                                     0.0, 1.0 / (2 * 255.0f), 0.0, 0.0, 0.0,
+                                     0.0, 0.0, -1.0 / (2 * 255.0f), 0.0,
+                                     /* second filter */
+                                     0.0, 0.0, 0.0, 1.0 / (2 * 255.0f), 0.0,
+                                     -1.0 / (2 * 255.0f), 0.0, 0.0, 0.0,
+                                     /* third filter */
+                                     0.0, 0.0, 0.0, -1.0 / (2 * 255.0f), 0.0,
+                                     1.0 / (2 * 255.0f), 0.0, 0.0, 0.0,
+                                     /* fourth filter */
+                                     0.0, -1.0 / (2 * 255.0f), 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 1.0 / (2 * 255.0f), 0.0};
+
+            /*size 3*3*1*4*/
+            vector<float> f2_init = {/* first filter row 1 */
+                                     0.0, 0.0, 0.0, 0.0, 
+                                     1.0 /(2.0), 1.0 / (2 ), 1.0 / (2 ), 1.0 / (2 ),
+                                     0.0, 0.0, 0.0, 0.0,
+
+                                     /*row 2*/
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+
+                                     /* row 3 */
+                                     0.0, 0.0, 0.0, 0.0,
+                                     -1.0 / (2.0f), -1.0 / (2.0f), -1.0 / (2.0f), -1.0 / (2.0f),
+                                     0.0, 0.0, 0.0, 0.0,
+
+                                     /* second filter */   
+                                     0.0, 0.0, 0.0, 0.0, 
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+                                     /*row 2*/
+                                     -1.0 / (2 * 1.0), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f),
+                                     0.0, 0.0, 0.0, 0.0,                                                                          
+                                     1.0 / (2), 1.0 / (2 ), 1.0 / (2 ), 1.0 / (2),
+                                     /* row 3 */
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+
+                                     /* third filter  row 1*/
+                                     0.0, 0.0, 0.0, 0.0, 
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+                                     /*row 2*/
+                                     1.0 / (2), 1.0 / (2 ), 1.0 / (2 ), 1.0 / (2),
+                                     0.0, 0.0, 0.0, 0.0,                                     
+                                     -1.0 / (2 * 1.0), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f),
+                                     /* row 3 */
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+
+                                     /* fourth filter */
+                                     0.0, 0.0, 0.0, 0.0, 
+                                     1.0 / (2 * 1.0f), 1.0 / (2 * 1.0f), 1.0 / (2 * 1.0f), 1.0 / (2 * 1.0f),
+                                     0.0, 0.0, 0.0, 0.0,
+
+                                     /*row 2*/
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+                                     0.0, 0.0, 0.0, 0.0,
+
+                                     /* row 3 */
+                                     0.0, 0.0, 0.0, 0.0,
+                                     -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f),
+                                     0.0, 0.0,0.0,0.0};
+
+
+
+            LOG.INFO() << "Filter size: " << f1_init.size();
+            cout << endl;
+
+            f1->CopyBufferToDevice(f1_init);
 
             TensorPtr<float> f2 = ADContext.CreateFilter<float>(
-                3, 3, 3, "conv2_filter", 0.01, true);
+                4, 4, 3, "conv2_filter", 0.01, true);
+
+          
+
+            f2->CopyBufferToDevice(f2_init);
 
             TensorPtr<float> f3 = ADContext.CreateFilter<float>(
-                3, 3, 3, "conv3_filter", 0.01, true);
+                4, 4, 3, "conv3_filter", 0.11, true);
+
+            f3->CopyBufferToDevice(f2_init);
 
             TensorPtr<float> f4 = ADContext.CreateFilter<float>(
-                3, 3, 3, "conv4_filter", 0.01, true);
+                4, 4, 3, "conv4_filter", 0.1, true);
+
+            f4->CopyBufferToDevice(f2_init);
 
             TensorPtr<float> f5 = ADContext.CreateFilter<float>(
-                3, 3, 4, "conv5_filter", 0.01, true);
+                4, 4, 3, "conv5_filter", 0.1, true);            
+            f5->CopyBufferToDevice(f2_init);
 
             // Final filter for outputting to 10 classes
             TensorPtr<float> out_filter = ADContext.CreateFilter<float>(
-                3, 10, 1, "out_filter", 0.1, true);
+                4, 10, 2, "out_filter", 0.11, true);
 
-            for (auto i = 0; i < 2; i++) {
+            std::vector<float> out_init = {
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,                 
+                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,                 
+                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,                 
+                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,                 
+                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+            };
+
+            out_filter->CopyBufferToDevice(out_init);
+
+            LOG.INFO() << "Filter size: " << out_filter->GetLinearSize() << " " << out_init.size();
+            cout << endl;
+
+            // Create a vector of trainable parametrs.
+            std::vector<TensorBasePtr> params = {f2, f3, f4, f5, out_filter};
+
+            for (auto i = 0; i < 100; i++) {
+                batchTimer.tick();
+
                 dataLoader.RunOnce();
                 dataLoader.Summary();
                 ADContext.Reset();
@@ -55,44 +179,76 @@ void TestMNIST() {
 
                 // As a test, try to save this image.
                 auto image = std::get<0>(ex_batch);
-                WriteImageTensorPNG("./data/mnist_load_test" + to_string(i) +".png", image);
+                auto cat_ids = std::get<2>(ex_batch);
 
-                TensorPtr<float> imageBatch =
-                    std::get<0>(ex_batch)->Cast<float>();
+                // WriteImageTensorPNG(
+                // "./data/mnist_load_test" + to_string(i) + ".png", image);
 
-                // First
+                TensorPtr<float> imageBatch = image->Cast<float>();
+
+                // First conv - 28x28 output
                 TensorPtr<float> features =
                     imageBatch->Convolve(f1, {1, 1}, {1, 1});
+                features = features->ReLU();
 
                 // Second convolution - size 14x14
                 auto features2 = features->Convolve(f2, {1, 1}, {2, 2});
+                features2 = features2->ReLU();
 
                 // Third convolution - size 7x7
                 auto features3 = features2->Convolve(f3, {1, 1}, {2, 2});
+                features3 = features3->ReLU();
 
                 // Fourth convolution - size 4x4
                 auto features4 = features3->Convolve(f4, {1, 1}, {2, 2});
+                features4 = features4->ReLU();
 
                 // Fifth convolution - size 2x2
                 auto features5 = features4->Convolve(f5, {0, 0}, {1, 1});
+                features5 = features5->ReLU();
 
                 auto out = features5->Convolve(out_filter, {0, 0}, {1, 1});
 
-                // Calculate loss function
-                auto cat_ids = std::get<2>(ex_batch);
-
                 auto loss = out->SigmoidCELoss(cat_ids);
 
-                LOG.INFO() << "Logits: " << out->PrintTensor(false, false);
-                LOG.INFO() << "Loss: " << loss->PrintTensor(false, false);
-                LOG.INFO() <<"Labels: " << cat_ids->PrintTensor(false, false);
+                std::vector<TensorBasePtr> featuresList = {
+                    features, features2, features3, features4, features5};
+
+                // LOG.INFO() << "Features: ";
+                // for (auto &t : featuresList) {
+                //     LOG.INFO() << t->GetName() << "\n   "
+                //                << t->PrintTensor(false, true);
+                // }
 
                 ADContext.CalcGradient(loss);
 
-                LOG.INFO() << "First filter: ";
-                LOG.INFO() << f1->PrintTensor();
-                LOG.INFO() << "First filter gradient: ";
-                LOG.INFO() << f1->PrintTensor(true);
+                LOG.INFO() << "Parameters: ";
+                for (auto &t : params) {
+                    LOG.INFO() << t->GetName() << "\n   "
+                               << t->PrintTensor(false, true);
+                }
+
+                LOG.INFO() << "F2 grad: " << f2->PrintTensor(true, true);
+
+                LOG.INFO() << "Logits: " << out->PrintTensor(false, false);
+                LOG.INFO() << "Loss: " << loss->PrintTensor(false, false);
+                LOG.INFO() << "Labels: " << cat_ids->PrintTensor(false, false);
+
+                // LOG.INFO() << "First filter gradient: ";
+                // LOG.INFO() << f1->PrintTensor(true);
+
+                // LOG.INFO() << "First filter: ";
+                // LOG.INFO() << f1->PrintTensor();
+
+                ADContext.StepOptimizer(params);
+
+                // LOG.INFO() << "First filter, post optimizer step: ";
+                // LOG.INFO() << f1->PrintTensor();
+
+                LOG.INFO() << ADContext.Print();
+
+                LOG.INFO() << "Batch elapsed: " << batchTimer.tick_us()
+                           << " usec";
             }
         });
 }
