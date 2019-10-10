@@ -66,7 +66,7 @@ class AutoDiffContext {
     }
 
     void CalcGradient(TensorBasePtr scalarTensor,
-                      std::vector<TensorBasePtr> parameters) {
+                      std::vector<TensorBasePtr> &parameters) {
         LOG.INFO() << "Trainable parameters with names : ";
         for (auto p : parameters) {
             LOG.INFO() << p->GetName() << ":" << p->GetId();
@@ -93,7 +93,7 @@ class AutoDiffContext {
             // this means that this op is somehow disconnected or upstream
             // from scalarTensor
             if (op->GetOutputTensor()->GetBackwardPasses() < 1) {
-                LOG.INFO() << "Skipping this op.";
+                LOG.INFO() << "Skipping op " << op->GetName();
                 continue;
             }
 
@@ -102,11 +102,27 @@ class AutoDiffContext {
     }
 
     /**
-     * Prints out all information fore debuggin:
+     * Performs simple SGD by applying the gradient.
+     */
+    void StepOptimizer(std::vector<TensorBasePtr> &params) {
+        for (auto &t : params) {
+            t->ApplyGradient(m_learningRate);
+        }
+    }
+
+    /**
+     * Prints out all information for debuggin:
      * - Tensor and Op Traces
      * - Memory profile
      */
     std::string Print();
+
+  private:
+    /**
+     * Optimizer settings
+     * Should later be broken out into a seperate class
+     */
+    float m_learningRate{0.001 * (1 / 50.0f)};
 
   private:
     std::vector<std::shared_ptr<BaseOperation>> m_opTrace;

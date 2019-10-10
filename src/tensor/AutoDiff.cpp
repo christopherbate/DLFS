@@ -18,7 +18,8 @@ std::string AutoDiffContext::Print() {
 
     for (auto &t : m_tensorTrace) {
         ss << t->GetName() << " - " << t->PrintShape() <<
-            " - BW Passes: " << t->GetBackwardPasses() << "\n";
+            " - BW Passes: " << t->GetBackwardPasses();
+        ss << " - RefCnt: " << t.use_count() << "\n";
     }
 
     ss << "------------Operations---------------------------\n";
