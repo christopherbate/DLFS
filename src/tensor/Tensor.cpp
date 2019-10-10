@@ -81,11 +81,11 @@ std::string Tensor<T>::PrintTensor(bool grad, bool breakChannels) {
                 }
             }
             ss << "]";
-            if(breakChannels){
-                ss<<"\n";
+            if (breakChannels) {
+                ss << "\n";
             }
         }
-         
+
         ss << "\n";
     }
     return ss.str();
@@ -109,6 +109,8 @@ void Tensor<T>::SetFilterShape(int numInputChn, int numOutputChn, int rows,
  * the shape of the tensor changes.
  */
 template <typename T> void Tensor<T>::FillCUDNNDesc() {
+
+    // Only create the filter description where necessary
     if (m_isFilter) {
         if (!m_filterDesc)
             checkCudaErrors(cudnnCreateFilterDescriptor(&m_filterDesc));
@@ -123,9 +125,11 @@ template <typename T> void Tensor<T>::FillCUDNNDesc() {
                 m_dwFilterDesc, m_dataType, CUDNN_TENSOR_NHWC, m_shape[0],
                 m_shape[3], m_shape[1], m_shape[2]));
         }
-    } else {
-        if (!m_tensorDesc)
-            checkCudaErrors(cudnnCreateTensorDescriptor(&m_tensorDesc));
+    }
+    
+    // Add tensors, including filters, need tensor descriptor.
+    if (!m_tensorDesc) {
+        checkCudaErrors(cudnnCreateTensorDescriptor(&m_tensorDesc));
         checkCudaErrors(cudnnSetTensor4dDescriptor(
             m_tensorDesc, CUDNN_TENSOR_NHWC, m_dataType, m_shape[0], m_shape[3],
             m_shape[1], m_shape[2]));
@@ -212,7 +216,7 @@ TensorPtr<T> Tensor<T>::Convolve(TensorPtr<T> filter, Pad2d padding,
     return outputTensor;
 }
 
-template <typename T> TensorPtr<T> Tensor<T>::Add(TensorPtr<T> rhs) {
+template <typename T> TensorPtr<T> Tensor<T>::Add(TensorPtr<T> rhs, T rhsMul) {
     shared_ptr<TensorOp<T>> addOp = make_shared<TensorOp<T>>(PW_ADD);
 
     addOp->SetName("AddOp");
@@ -227,7 +231,7 @@ template <typename T> TensorPtr<T> Tensor<T>::Add(TensorPtr<T> rhs) {
     outputTensor->AllocateIfNecessary();
 
     addOp->SetOutput(outputTensor);
-
+    addOp->SetRHSScale(rhsMul);
     addOp->ExecuteForward();
 
     ADContext.AddOp(addOp);
@@ -338,7 +342,7 @@ TensorPtr<TargetType> Tensor<T>::Cast() {
     cTensor->AllocateIfNecessary();
 
     // Perform conversion on the host side (should update to
-    // CUDA kernel soon).
+    // CUDA kernel).
     std::vector<T> buffer(GetLinearSize());
     std::vector<TargetType> newBuffer(GetLinearSize());
 
@@ -349,6 +353,16 @@ TensorPtr<TargetType> Tensor<T>::Cast() {
     cTensor->CopyBufferToDevice(newBuffer);
 
     return cTensor;
+}
+
+template <typename T> void Tensor<T>::ApplyGradient(float step) {
+    std::shared_ptr<TensorOp<T>> op = make_shared<TensorOp<T>>(PW_ADD);
+    LOG.DEBUG() << step;
+    op->SetLHS(this->shared_from_this());
+    op->SetGradRHS(this->shared_from_this());
+    op->SetOutput(this->shared_from_this());
+    op->SetRHSScale(-1.0f*step);
+    op->ExecuteForward();
 }
 
 template class Tensor<float>;

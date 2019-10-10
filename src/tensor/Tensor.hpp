@@ -38,6 +38,7 @@ class TensorBase {
   public:
     virtual void SetShape(TensorShape shape) = 0;
     virtual void InitGradChain() = 0;
+    virtual void ApplyGradient(float step) = 0;
 
     inline std::string GetName() { return m_name; }
 
@@ -68,6 +69,8 @@ class TensorBase {
         shapeMsg += ")";
         return shapeMsg;
     }
+
+    virtual std::string PrintTensor(bool grad, bool breakChannels) = 0;
 
   protected:
     TensorShape m_shape;
@@ -219,7 +222,7 @@ class Tensor : public TensorBase,
      * device buffer must already have been allocated.
      */
     inline void CopyBufferToDevice(const std::vector<T> &from) {
-        assert(from.size() * sizeof(T) == GetLinearSize() * sizeof(T));
+        assert(from.size() == GetLinearSize());
         assert(m_deviceBuffer != nullptr);
         checkCudaErrors(cudaMemcpy(m_deviceBuffer, from.data(),
                                    GetLinearSize() * sizeof(T),
@@ -271,7 +274,7 @@ class Tensor : public TensorBase,
      *
      * This function is Implemented with the TensorOp operation.
      */
-    TensorPtr<T> Add(TensorPtr<T> rhs);
+    TensorPtr<T> Add(TensorPtr<T> rhs, T rhsMul = 1.0f);
     TensorPtr<T> Power(T scalar);
 
     friend TensorPtr<T> operator+(const TensorPtr<T> &lhs,
@@ -282,7 +285,7 @@ class Tensor : public TensorBase,
 
     friend TensorPtr<T> operator-(const TensorPtr<T> &lhs,
                                   const TensorPtr<T> &rhs) {
-        TensorPtr<T> out = lhs->Add(rhs);
+        TensorPtr<T> out = lhs->Add(rhs, -1);
         return out;
     }
 
@@ -297,6 +300,11 @@ class Tensor : public TensorBase,
     TensorPtr<T> Softmax();
     TensorPtr<T> SigmoidCELoss(TensorPtr<uint16_t> labels);
     TensorPtr<T> ReLU();
+
+    /**
+     * Optimization
+     */
+    void ApplyGradient(float step);
 
   private:
     cudnnDataType_t m_dataType;
