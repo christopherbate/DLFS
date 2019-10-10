@@ -87,7 +87,7 @@ void Convolution<T>::ExecuteForward()
                                             m_filter->GetFilterDesc(),
                                             m_convDesc, m_output->GetTensorDesc(), m_convFwdAlg, &wsSize);
 
-    LOG.INFO() << "Executing cudnn ConvFwd kernel, " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
+    LOG.DEBUG() << "Executing cudnn ConvFwd kernel, " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
 
     unsigned char *devWs = NULL;
     if (wsSize > 0)
@@ -131,7 +131,7 @@ void Convolution<T>::ExecuteBackward()
                                                        m_convBwdFilterAlg,
                                                        &wsSize);
 
-        LOG.INFO() << "Execuing cudnn ConvBwdFilter kernel " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
+        LOG.DEBUG() << "Execuing cudnn ConvBwdFilter kernel " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
 
         if (wsSize > 0)
             checkCudaErrors(cudaMalloc(&devWs, wsSize));
@@ -165,7 +165,7 @@ void Convolution<T>::ExecuteBackward()
             wsSize = bwdDataWsSize;
         }
 
-        LOG.INFO() << "Execuing cudnn ConvBwdData kernel " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
+        LOG.DEBUG() << "Execuing cudnn ConvBwdData kernel " << (float)wsSize / 1024000.0 << " Mb of GPU workspace.";
 
         checkCudaErrors(cudnnConvolutionBackwardData(GPUContext.GetCUDNNHandle(), &blendFactors[0],
                                                      m_filter->GetFilterDesc(), m_filter->GetDevicePointer(),
