@@ -51,7 +51,7 @@ extern "C" void LaunchSigmoidCEKernel(CustomOpDataType dataType,
 
     switch (dataType) {
     case CustomOpDataType::Float:
-        LOG.INFO() << "Launching sigmoid cross entropy (float) kernel with "
+        LOG.DEBUG() << "Launching sigmoid cross entropy (float) kernel with "
                    << threads << " threads";
         SigmoidCrossEntropyFloat<<<1, threads>>>(ti[0], (float *)logits, ti[1],
                                                  (uint16_t *)labels, ti[2],
@@ -76,7 +76,7 @@ LaunchSigmoidCEBackwardKernel(CustomOpDataType dataType, TensorShape logitShape,
 
     switch (dataType) {
     case CustomOpDataType::Float:
-        LOG.INFO()
+        LOG.DEBUG()
             << "Launching sigmoid cross entropy backward (float) kernel with "
             << threads << " threads";
         SigmoidCrossEntropyBackwardFloat<<<1, threads>>>(
