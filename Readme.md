@@ -1,5 +1,9 @@
 # Deep Learning from Scratch
 
+
+[Project Overview Presentation](https://docs.google.com/presentation/d/13iccyzgeLPLY2YbbjRyn206PnmnWebZJnQ1kIaA85Uk/edit?usp=sharing)
+
+
 A deep learning C++ library built on CUDNN. The aim of this library is to provide simple interfaces to build deep learning 
 alogorithms (mostly object detection) while maximizing speed and the latest features provided by NVIDIA RTX/Turing cards.
 
