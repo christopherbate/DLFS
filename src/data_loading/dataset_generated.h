@@ -141,13 +141,14 @@ struct Annotation FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_BBOX = 4,
     VT_CAT_ID = 6,
     VT_ID = 8,
-    VT_IMAGE_ID = 10
+    VT_IMAGE_ID = 10,
+    VT_AREA = 12
   };
-  const BoundingBox *bbox() const {
-    return GetStruct<const BoundingBox *>(VT_BBOX);
+  const DLFS::BoundingBox *bbox() const {
+    return GetStruct<const DLFS::BoundingBox *>(VT_BBOX);
   }
-  BoundingBox *mutable_bbox() {
-    return GetStruct<BoundingBox *>(VT_BBOX);
+  DLFS::BoundingBox *mutable_bbox() {
+    return GetStruct<DLFS::BoundingBox *>(VT_BBOX);
   }
   uint16_t cat_id() const {
     return GetField<uint16_t>(VT_CAT_ID, 0);
@@ -173,12 +174,19 @@ struct Annotation FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool mutate_image_id(uint64_t _image_id) {
     return SetField<uint64_t>(VT_IMAGE_ID, _image_id, 0);
   }
+  float area() const {
+    return GetField<float>(VT_AREA, 0.0f);
+  }
+  bool mutate_area(float _area) {
+    return SetField<float>(VT_AREA, _area, 0.0f);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
-           VerifyField<BoundingBox>(verifier, VT_BBOX) &&
+           VerifyField<DLFS::BoundingBox>(verifier, VT_BBOX) &&
            VerifyField<uint16_t>(verifier, VT_CAT_ID) &&
            VerifyField<uint64_t>(verifier, VT_ID) &&
            VerifyField<uint64_t>(verifier, VT_IMAGE_ID) &&
+           VerifyField<float>(verifier, VT_AREA) &&
            verifier.EndTable();
   }
 };
@@ -186,7 +194,7 @@ struct Annotation FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
 struct AnnotationBuilder {
   flatbuffers::FlatBufferBuilder &fbb_;
   flatbuffers::uoffset_t start_;
-  void add_bbox(const BoundingBox *bbox) {
+  void add_bbox(const DLFS::BoundingBox *bbox) {
     fbb_.AddStruct(Annotation::VT_BBOX, bbox);
   }
   void add_cat_id(uint16_t cat_id) {
@@ -197,6 +205,9 @@ struct AnnotationBuilder {
   }
   void add_image_id(uint64_t image_id) {
     fbb_.AddElement<uint64_t>(Annotation::VT_IMAGE_ID, image_id, 0);
+  }
+  void add_area(float area) {
+    fbb_.AddElement<float>(Annotation::VT_AREA, area, 0.0f);
   }
   explicit AnnotationBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -212,13 +223,15 @@ struct AnnotationBuilder {
 
 inline flatbuffers::Offset<Annotation> CreateAnnotation(
     flatbuffers::FlatBufferBuilder &_fbb,
-    const BoundingBox *bbox = 0,
+    const DLFS::BoundingBox *bbox = 0,
     uint16_t cat_id = 0,
     uint64_t id = 0,
-    uint64_t image_id = 0) {
+    uint64_t image_id = 0,
+    float area = 0.0f) {
   AnnotationBuilder builder_(_fbb);
   builder_.add_image_id(image_id);
   builder_.add_id(id);
+  builder_.add_area(area);
   builder_.add_bbox(bbox);
   builder_.add_cat_id(cat_id);
   return builder_.Finish();
@@ -251,11 +264,11 @@ struct Example FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   int KeyCompareWithValue(uint64_t val) const {
     return static_cast<int>(id() > val) - static_cast<int>(id() < val);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<Annotation>> *annotations() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Annotation>> *>(VT_ANNOTATIONS);
+  const flatbuffers::Vector<flatbuffers::Offset<DLFS::Annotation>> *annotations() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<DLFS::Annotation>> *>(VT_ANNOTATIONS);
   }
-  flatbuffers::Vector<flatbuffers::Offset<Annotation>> *mutable_annotations() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<Annotation>> *>(VT_ANNOTATIONS);
+  flatbuffers::Vector<flatbuffers::Offset<DLFS::Annotation>> *mutable_annotations() {
+    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<DLFS::Annotation>> *>(VT_ANNOTATIONS);
   }
   const flatbuffers::Vector<uint8_t> *image() const {
     return GetPointer<const flatbuffers::Vector<uint8_t> *>(VT_IMAGE);
@@ -300,7 +313,7 @@ struct ExampleBuilder {
   void add_id(uint64_t id) {
     fbb_.AddElement<uint64_t>(Example::VT_ID, id, 0);
   }
-  void add_annotations(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Annotation>>> annotations) {
+  void add_annotations(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<DLFS::Annotation>>> annotations) {
     fbb_.AddOffset(Example::VT_ANNOTATIONS, annotations);
   }
   void add_image(flatbuffers::Offset<flatbuffers::Vector<uint8_t>> image) {
@@ -328,7 +341,7 @@ inline flatbuffers::Offset<Example> CreateExample(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> file_name = 0,
     uint64_t id = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Annotation>>> annotations = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<DLFS::Annotation>>> annotations = 0,
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> image = 0,
     uint64_t width = 0,
     uint64_t height = 0) {
@@ -346,12 +359,12 @@ inline flatbuffers::Offset<Example> CreateExampleDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *file_name = nullptr,
     uint64_t id = 0,
-    const std::vector<flatbuffers::Offset<Annotation>> *annotations = nullptr,
+    const std::vector<flatbuffers::Offset<DLFS::Annotation>> *annotations = nullptr,
     const std::vector<uint8_t> *image = nullptr,
     uint64_t width = 0,
     uint64_t height = 0) {
   auto file_name__ = file_name ? _fbb.CreateString(file_name) : 0;
-  auto annotations__ = annotations ? _fbb.CreateVector<flatbuffers::Offset<Annotation>>(*annotations) : 0;
+  auto annotations__ = annotations ? _fbb.CreateVector<flatbuffers::Offset<DLFS::Annotation>>(*annotations) : 0;
   auto image__ = image ? _fbb.CreateVector<uint8_t>(*image) : 0;
   return DLFS::CreateExample(
       _fbb,
@@ -375,17 +388,17 @@ struct Dataset FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool mutate_id(uint64_t _id) {
     return SetField<uint64_t>(VT_ID, _id, 0);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<Example>> *examples() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Example>> *>(VT_EXAMPLES);
+  const flatbuffers::Vector<flatbuffers::Offset<DLFS::Example>> *examples() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<DLFS::Example>> *>(VT_EXAMPLES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<Example>> *mutable_examples() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<Example>> *>(VT_EXAMPLES);
+  flatbuffers::Vector<flatbuffers::Offset<DLFS::Example>> *mutable_examples() {
+    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<DLFS::Example>> *>(VT_EXAMPLES);
   }
-  const flatbuffers::Vector<flatbuffers::Offset<Category>> *categories() const {
-    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<Category>> *>(VT_CATEGORIES);
+  const flatbuffers::Vector<flatbuffers::Offset<DLFS::Category>> *categories() const {
+    return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<DLFS::Category>> *>(VT_CATEGORIES);
   }
-  flatbuffers::Vector<flatbuffers::Offset<Category>> *mutable_categories() {
-    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<Category>> *>(VT_CATEGORIES);
+  flatbuffers::Vector<flatbuffers::Offset<DLFS::Category>> *mutable_categories() {
+    return GetPointer<flatbuffers::Vector<flatbuffers::Offset<DLFS::Category>> *>(VT_CATEGORIES);
   }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
@@ -406,10 +419,10 @@ struct DatasetBuilder {
   void add_id(uint64_t id) {
     fbb_.AddElement<uint64_t>(Dataset::VT_ID, id, 0);
   }
-  void add_examples(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Example>>> examples) {
+  void add_examples(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<DLFS::Example>>> examples) {
     fbb_.AddOffset(Dataset::VT_EXAMPLES, examples);
   }
-  void add_categories(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Category>>> categories) {
+  void add_categories(flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<DLFS::Category>>> categories) {
     fbb_.AddOffset(Dataset::VT_CATEGORIES, categories);
   }
   explicit DatasetBuilder(flatbuffers::FlatBufferBuilder &_fbb)
@@ -427,8 +440,8 @@ struct DatasetBuilder {
 inline flatbuffers::Offset<Dataset> CreateDataset(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t id = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Example>>> examples = 0,
-    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<Category>>> categories = 0) {
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<DLFS::Example>>> examples = 0,
+    flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<DLFS::Category>>> categories = 0) {
   DatasetBuilder builder_(_fbb);
   builder_.add_id(id);
   builder_.add_categories(categories);
@@ -439,10 +452,10 @@ inline flatbuffers::Offset<Dataset> CreateDataset(
 inline flatbuffers::Offset<Dataset> CreateDatasetDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     uint64_t id = 0,
-    const std::vector<flatbuffers::Offset<Example>> *examples = nullptr,
-    const std::vector<flatbuffers::Offset<Category>> *categories = nullptr) {
-  auto examples__ = examples ? _fbb.CreateVector<flatbuffers::Offset<Example>>(*examples) : 0;
-  auto categories__ = categories ? _fbb.CreateVector<flatbuffers::Offset<Category>>(*categories) : 0;
+    const std::vector<flatbuffers::Offset<DLFS::Example>> *examples = nullptr,
+    const std::vector<flatbuffers::Offset<DLFS::Category>> *categories = nullptr) {
+  auto examples__ = examples ? _fbb.CreateVector<flatbuffers::Offset<DLFS::Example>>(*examples) : 0;
+  auto categories__ = categories ? _fbb.CreateVector<flatbuffers::Offset<DLFS::Category>>(*categories) : 0;
   return DLFS::CreateDataset(
       _fbb,
       id,

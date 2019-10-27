@@ -1,7 +1,7 @@
 /**
  * This is a command line utility that converts a COCO annotations JSON file
  * into a flatbuffer with the schema defined in src/data_loading/dataset.fbs
- * 
+ *
  * Usage:
  * convert_coco [path to anns.json] [path to output .anns]
  */
@@ -9,12 +9,12 @@
 #include "../data_loading/dataset_generated.h"
 #include "external/json.hpp"
 
-#include <string>
-#include <iostream>
-#include <fstream>
-#include <vector>
 #include <chrono>
+#include <fstream>
+#include <iostream>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 using namespace std;
 using json = nlohmann::json;
@@ -22,29 +22,28 @@ using namespace DLFS;
 
 const string usage = "convert_coco [path/to/anns.json] [path/to/output.anns]";
 
-BoundingBox convertToBBOX(int x, int y, int w, int h)
-{
+BoundingBox convertToBBOX(int x, int y, int w, int h) {
     BoundingBox bbox(y, x, y + h, x + w);
     return bbox;
 }
 
-unsigned int Tick()
-{
-    static chrono::time_point<chrono::steady_clock> last_time = chrono::steady_clock::now();
+unsigned int Tick() {
+    static chrono::time_point<chrono::steady_clock> last_time =
+        chrono::steady_clock::now();
 
     auto time_now = chrono::steady_clock::now();
 
-    unsigned int elapsed = chrono::duration_cast<chrono::milliseconds>(time_now - last_time).count();
+    unsigned int elapsed =
+        chrono::duration_cast<chrono::milliseconds>(time_now - last_time)
+            .count();
 
     last_time = time_now;
 
     return elapsed;
 }
 
-int main(int argc, char **argv)
-{
-    if (argc < 3)
-    {
+int main(int argc, char **argv) {
+    if (argc < 3) {
         cout << usage << endl;
         return 0;
     }
@@ -67,8 +66,7 @@ int main(int argc, char **argv)
     // Build categories.
     auto categories = input_json["categories"];
     vector<flatbuffers::Offset<Category>> cat_vector;
-    for (auto it = categories.begin(); it != categories.end(); it++)
-    {
+    for (auto it = categories.begin(); it != categories.end(); it++) {
         string cat_name = (*it)["name"];
         auto fb_cat_name = builder.CreateString(cat_name);
         uint16_t cat_id = (*it)["id"];
@@ -82,16 +80,18 @@ int main(int argc, char **argv)
 
     // Build annotations map
     auto anns = input_json["annotations"];
-    unordered_map<unsigned int, vector<flatbuffers::Offset<Annotation>>> imageIdToAnns;
-    for (auto it = anns.begin(); it != anns.end(); it++)
-    {
+    unordered_map<unsigned int, vector<flatbuffers::Offset<Annotation>>>
+        imageIdToAnns;
+    for (auto it = anns.begin(); it != anns.end(); it++) {
         uint64_t imageId = (*it)["image_id"];
         uint64_t annId = (*it)["id"];
         auto cocoBbox = (*it)["bbox"];
         uint16_t catId = (*it)["category_id"];
-        auto bbox = convertToBBOX(cocoBbox[0], cocoBbox[1], cocoBbox[2],
-                                  cocoBbox[3]);
-        auto ann = CreateAnnotation(builder, &bbox, catId, annId, imageId);
+        auto bbox =
+            convertToBBOX(cocoBbox[0], cocoBbox[1], cocoBbox[2], cocoBbox[3]);
+        float area = (bbox.x2() - bbox.x1()) * (bbox.y2() - bbox.y1());
+        auto ann =
+            CreateAnnotation(builder, &bbox, catId, annId, imageId, area);
 
         imageIdToAnns[imageId].push_back(ann);
     }
@@ -103,11 +103,11 @@ int main(int argc, char **argv)
     vector<flatbuffers::Offset<Example>> ex_vector;
     unsigned int skip_count = 0;
     unsigned int total_count = 0;
-    for (auto it = imgs.begin(); it != imgs.end(); it++)
-    {
+    for (auto it = imgs.begin(); it != imgs.end(); it++) {
         uint64_t imgId = (*it)["id"];
-        if(imageIdToAnns[imgId].size() == 0){
-            cout << "WARNING: skipping imageId " << imgId << " as it has no annotations." << endl;
+        if (imageIdToAnns[imgId].size() == 0) {
+            cout << "WARNING: skipping imageId " << imgId
+                 << " as it has no annotations." << endl;
             skip_count++;
             continue;
         }
@@ -123,7 +123,8 @@ int main(int argc, char **argv)
 
     cout << "Serialized images in " << Tick() << " msec." << endl;
 
-    cout << "Total images : " << total_count <<" Skipped images " << skip_count << endl;
+    cout << "Total images : " << total_count << " Skipped images " << skip_count
+         << endl;
 
     DatasetBuilder datasetBuilder(builder);
     datasetBuilder.add_id(0);

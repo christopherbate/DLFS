@@ -17,6 +17,7 @@ table Annotation {
     cat_id:ushort;
     id:ulong(key);
     image_id:ulong;    
+    area:float;
 }
 
 table Example {
