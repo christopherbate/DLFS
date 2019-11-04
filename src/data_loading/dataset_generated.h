@@ -65,7 +65,10 @@ FLATBUFFERS_STRUCT_END(BoundingBox, 16);
 struct Category FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   enum FlatBuffersVTableOffset FLATBUFFERS_VTABLE_UNDERLYING_TYPE {
     VT_NAME = 4,
-    VT_ID = 6
+    VT_ID = 6,
+    VT_EXAMPLES = 8,
+    VT_NUM_IMAGES = 10,
+    VT_NUM_ANNS = 12
   };
   const flatbuffers::String *name() const {
     return GetPointer<const flatbuffers::String *>(VT_NAME);
@@ -85,11 +88,33 @@ struct Category FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   int KeyCompareWithValue(uint16_t val) const {
     return static_cast<int>(id() > val) - static_cast<int>(id() < val);
   }
+  const flatbuffers::Vector<uint64_t> *examples() const {
+    return GetPointer<const flatbuffers::Vector<uint64_t> *>(VT_EXAMPLES);
+  }
+  flatbuffers::Vector<uint64_t> *mutable_examples() {
+    return GetPointer<flatbuffers::Vector<uint64_t> *>(VT_EXAMPLES);
+  }
+  uint64_t num_images() const {
+    return GetField<uint64_t>(VT_NUM_IMAGES, 0);
+  }
+  bool mutate_num_images(uint64_t _num_images) {
+    return SetField<uint64_t>(VT_NUM_IMAGES, _num_images, 0);
+  }
+  uint64_t num_anns() const {
+    return GetField<uint64_t>(VT_NUM_ANNS, 0);
+  }
+  bool mutate_num_anns(uint64_t _num_anns) {
+    return SetField<uint64_t>(VT_NUM_ANNS, _num_anns, 0);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_NAME) &&
            verifier.VerifyString(name()) &&
            VerifyField<uint16_t>(verifier, VT_ID) &&
+           VerifyOffset(verifier, VT_EXAMPLES) &&
+           verifier.VerifyVector(examples()) &&
+           VerifyField<uint64_t>(verifier, VT_NUM_IMAGES) &&
+           VerifyField<uint64_t>(verifier, VT_NUM_ANNS) &&
            verifier.EndTable();
   }
 };
@@ -102,6 +127,15 @@ struct CategoryBuilder {
   }
   void add_id(uint16_t id) {
     fbb_.AddElement<uint16_t>(Category::VT_ID, id, 0);
+  }
+  void add_examples(flatbuffers::Offset<flatbuffers::Vector<uint64_t>> examples) {
+    fbb_.AddOffset(Category::VT_EXAMPLES, examples);
+  }
+  void add_num_images(uint64_t num_images) {
+    fbb_.AddElement<uint64_t>(Category::VT_NUM_IMAGES, num_images, 0);
+  }
+  void add_num_anns(uint64_t num_anns) {
+    fbb_.AddElement<uint64_t>(Category::VT_NUM_ANNS, num_anns, 0);
   }
   explicit CategoryBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
@@ -118,8 +152,14 @@ struct CategoryBuilder {
 inline flatbuffers::Offset<Category> CreateCategory(
     flatbuffers::FlatBufferBuilder &_fbb,
     flatbuffers::Offset<flatbuffers::String> name = 0,
-    uint16_t id = 0) {
+    uint16_t id = 0,
+    flatbuffers::Offset<flatbuffers::Vector<uint64_t>> examples = 0,
+    uint64_t num_images = 0,
+    uint64_t num_anns = 0) {
   CategoryBuilder builder_(_fbb);
+  builder_.add_num_anns(num_anns);
+  builder_.add_num_images(num_images);
+  builder_.add_examples(examples);
   builder_.add_name(name);
   builder_.add_id(id);
   return builder_.Finish();
@@ -128,12 +168,19 @@ inline flatbuffers::Offset<Category> CreateCategory(
 inline flatbuffers::Offset<Category> CreateCategoryDirect(
     flatbuffers::FlatBufferBuilder &_fbb,
     const char *name = nullptr,
-    uint16_t id = 0) {
+    uint16_t id = 0,
+    const std::vector<uint64_t> *examples = nullptr,
+    uint64_t num_images = 0,
+    uint64_t num_anns = 0) {
   auto name__ = name ? _fbb.CreateString(name) : 0;
+  auto examples__ = examples ? _fbb.CreateVector<uint64_t>(*examples) : 0;
   return DLFS::CreateCategory(
       _fbb,
       name__,
-      id);
+      id,
+      examples__,
+      num_images,
+      num_anns);
 }
 
 struct Annotation FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
@@ -244,7 +291,8 @@ struct Example FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
     VT_ANNOTATIONS = 8,
     VT_IMAGE = 10,
     VT_WIDTH = 12,
-    VT_HEIGHT = 14
+    VT_HEIGHT = 14,
+    VT_IDX = 16
   };
   const flatbuffers::String *file_name() const {
     return GetPointer<const flatbuffers::String *>(VT_FILE_NAME);
@@ -257,12 +305,6 @@ struct Example FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   }
   bool mutate_id(uint64_t _id) {
     return SetField<uint64_t>(VT_ID, _id, 0);
-  }
-  bool KeyCompareLessThan(const Example *o) const {
-    return id() < o->id();
-  }
-  int KeyCompareWithValue(uint64_t val) const {
-    return static_cast<int>(id() > val) - static_cast<int>(id() < val);
   }
   const flatbuffers::Vector<flatbuffers::Offset<DLFS::Annotation>> *annotations() const {
     return GetPointer<const flatbuffers::Vector<flatbuffers::Offset<DLFS::Annotation>> *>(VT_ANNOTATIONS);
@@ -288,6 +330,18 @@ struct Example FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
   bool mutate_height(uint64_t _height) {
     return SetField<uint64_t>(VT_HEIGHT, _height, 0);
   }
+  uint64_t idx() const {
+    return GetField<uint64_t>(VT_IDX, 0);
+  }
+  bool mutate_idx(uint64_t _idx) {
+    return SetField<uint64_t>(VT_IDX, _idx, 0);
+  }
+  bool KeyCompareLessThan(const Example *o) const {
+    return idx() < o->idx();
+  }
+  int KeyCompareWithValue(uint64_t val) const {
+    return static_cast<int>(idx() > val) - static_cast<int>(idx() < val);
+  }
   bool Verify(flatbuffers::Verifier &verifier) const {
     return VerifyTableStart(verifier) &&
            VerifyOffset(verifier, VT_FILE_NAME) &&
@@ -300,6 +354,7 @@ struct Example FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {
            verifier.VerifyVector(image()) &&
            VerifyField<uint64_t>(verifier, VT_WIDTH) &&
            VerifyField<uint64_t>(verifier, VT_HEIGHT) &&
+           VerifyField<uint64_t>(verifier, VT_IDX) &&
            verifier.EndTable();
   }
 };
@@ -325,6 +380,9 @@ struct ExampleBuilder {
   void add_height(uint64_t height) {
     fbb_.AddElement<uint64_t>(Example::VT_HEIGHT, height, 0);
   }
+  void add_idx(uint64_t idx) {
+    fbb_.AddElement<uint64_t>(Example::VT_IDX, idx, 0);
+  }
   explicit ExampleBuilder(flatbuffers::FlatBufferBuilder &_fbb)
         : fbb_(_fbb) {
     start_ = fbb_.StartTable();
@@ -344,8 +402,10 @@ inline flatbuffers::Offset<Example> CreateExample(
     flatbuffers::Offset<flatbuffers::Vector<flatbuffers::Offset<DLFS::Annotation>>> annotations = 0,
     flatbuffers::Offset<flatbuffers::Vector<uint8_t>> image = 0,
     uint64_t width = 0,
-    uint64_t height = 0) {
+    uint64_t height = 0,
+    uint64_t idx = 0) {
   ExampleBuilder builder_(_fbb);
+  builder_.add_idx(idx);
   builder_.add_height(height);
   builder_.add_width(width);
   builder_.add_id(id);
@@ -362,7 +422,8 @@ inline flatbuffers::Offset<Example> CreateExampleDirect(
     const std::vector<flatbuffers::Offset<DLFS::Annotation>> *annotations = nullptr,
     const std::vector<uint8_t> *image = nullptr,
     uint64_t width = 0,
-    uint64_t height = 0) {
+    uint64_t height = 0,
+    uint64_t idx = 0) {
   auto file_name__ = file_name ? _fbb.CreateString(file_name) : 0;
   auto annotations__ = annotations ? _fbb.CreateVector<flatbuffers::Offset<DLFS::Annotation>>(*annotations) : 0;
   auto image__ = image ? _fbb.CreateVector<uint8_t>(*image) : 0;
@@ -373,7 +434,8 @@ inline flatbuffers::Offset<Example> CreateExampleDirect(
       annotations__,
       image__,
       width,
-      height);
+      height,
+      idx);
 }
 
 struct Dataset FLATBUFFERS_FINAL_CLASS : private flatbuffers::Table {

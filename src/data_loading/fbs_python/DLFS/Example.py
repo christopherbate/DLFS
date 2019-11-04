@@ -88,7 +88,14 @@ class Example(object):
             return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
         return 0
 
-def ExampleStart(builder): builder.StartObject(6)
+    # Example
+    def Idx(self):
+        o = flatbuffers.number_types.UOffsetTFlags.py_type(self._tab.Offset(16))
+        if o != 0:
+            return self._tab.Get(flatbuffers.number_types.Uint64Flags, o + self._tab.Pos)
+        return 0
+
+def ExampleStart(builder): builder.StartObject(7)
 def ExampleAddFileName(builder, fileName): builder.PrependUOffsetTRelativeSlot(0, flatbuffers.number_types.UOffsetTFlags.py_type(fileName), 0)
 def ExampleAddId(builder, id): builder.PrependUint64Slot(1, id, 0)
 def ExampleAddAnnotations(builder, annotations): builder.PrependUOffsetTRelativeSlot(2, flatbuffers.number_types.UOffsetTFlags.py_type(annotations), 0)
@@ -97,4 +104,5 @@ def ExampleAddImage(builder, image): builder.PrependUOffsetTRelativeSlot(3, flat
 def ExampleStartImageVector(builder, numElems): return builder.StartVector(1, numElems, 1)
 def ExampleAddWidth(builder, width): builder.PrependUint64Slot(4, width, 0)
 def ExampleAddHeight(builder, height): builder.PrependUint64Slot(5, height, 0)
+def ExampleAddIdx(builder, idx): builder.PrependUint64Slot(6, idx, 0)
 def ExampleEnd(builder): return builder.EndObject()

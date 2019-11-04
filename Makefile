@@ -6,7 +6,8 @@ FLAT_C := flatc
 KERNEL_FLAGS := --gpu-architecture=compute_75 -lineinfo --compiler-options -Wall \
 				-I ./src/
 CXX_FLAGS := --compiler-options -Wall --compiler-options -Werror --compiler-options -MMD \
-			 --compiler-options -Wextra -I ./src/ --gpu-architecture=compute_75 -lineinfo 
+			 --compiler-options -Wextra -I ./src/ --gpu-architecture=compute_75 -lineinfo \
+			 -std=c++14
 CUDA_OPTS=
 LIBS := -lnvjpeg -lcudnn -lcublas
 OBJDIR := .build

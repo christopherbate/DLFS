@@ -9,9 +9,11 @@
 #include "../data_loading/dataset_generated.h"
 #include "external/json.hpp"
 
+#include <cerrno>
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -55,6 +57,11 @@ int main(int argc, char **argv) {
 
     // read in the json file.
     ifstream infile(input_path);
+    if (!infile.is_open()) {
+        cerr << "Failed to open input file. " << errno << endl;
+        return -1;
+    }
+
     json input_json;
     infile >> input_json;
 
@@ -63,30 +70,23 @@ int main(int argc, char **argv) {
     // Create the builder
     flatbuffers::FlatBufferBuilder builder(1024);
 
-    // Build categories.
-    auto categories = input_json["categories"];
-    vector<flatbuffers::Offset<Category>> cat_vector;
-    for (auto it = categories.begin(); it != categories.end(); it++) {
-        string cat_name = (*it)["name"];
-        auto fb_cat_name = builder.CreateString(cat_name);
-        uint16_t cat_id = (*it)["id"];
-
-        auto cat = CreateCategory(builder, fb_cat_name, cat_id);
-        cat_vector.push_back(cat);
-    }
-    auto fb_cats = builder.CreateVectorOfSortedTables(&cat_vector);
-
-    cout << "Serialized categories in " << Tick() << " msec." << endl;
+    // Forward declare the data structures we will need.
+    unordered_map<unsigned int, vector<flatbuffers::Offset<Annotation>>>
+        imageIdToAnns; /*imageId to Annotations*/
+    unordered_map<unsigned int, set<unsigned int>>
+        catIdToExampleIdSet; /*catId to unique Example Ids*/
+    unordered_map<uint64_t, uint64_t> imgIdRemap;
+    vector<flatbuffers::Offset<Example>> ex_vector;   /* Example list */
+    vector<flatbuffers::Offset<Category>> cat_vector; /* Cateogry List */
 
     // Build annotations map
     auto anns = input_json["annotations"];
-    unordered_map<unsigned int, vector<flatbuffers::Offset<Annotation>>>
-        imageIdToAnns;
     for (auto it = anns.begin(); it != anns.end(); it++) {
         uint64_t imageId = (*it)["image_id"];
         uint64_t annId = (*it)["id"];
         auto cocoBbox = (*it)["bbox"];
         uint16_t catId = (*it)["category_id"];
+
         auto bbox =
             convertToBBOX(cocoBbox[0], cocoBbox[1], cocoBbox[2], cocoBbox[3]);
         float area = (bbox.x2() - bbox.x1()) * (bbox.y2() - bbox.y1());
@@ -94,15 +94,16 @@ int main(int argc, char **argv) {
             CreateAnnotation(builder, &bbox, catId, annId, imageId, area);
 
         imageIdToAnns[imageId].push_back(ann);
+        catIdToExampleIdSet[catId].insert(imageId);
     }
 
-    cout << "Built image toannotation map in " << Tick() << " msec." << endl;
+    cout << "Built image to annotation map in " << Tick() << " msec." << endl;
 
     // Build images
     auto imgs = input_json["images"];
-    vector<flatbuffers::Offset<Example>> ex_vector;
     unsigned int skip_count = 0;
     unsigned int total_count = 0;
+    unsigned int idx = 0;
     for (auto it = imgs.begin(); it != imgs.end(); it++) {
         uint64_t imgId = (*it)["id"];
         if (imageIdToAnns[imgId].size() == 0) {
@@ -115,11 +116,41 @@ int main(int argc, char **argv) {
         auto fb_file_name = builder.CreateString(file_name);
         auto fb_anns = builder.CreateVector(imageIdToAnns[imgId]);
 
-        auto img = CreateExample(builder, fb_file_name, imgId, fb_anns);
+        auto img = CreateExample(builder, fb_file_name, imgId, fb_anns, 0,
+                                 (*it)["width"], (*it)["height"], idx);
+        imgIdRemap[imgId] = idx;
+
         ex_vector.push_back(img);
+        idx++;
         total_count++;
     }
     auto fb_examples = builder.CreateVectorOfSortedTables(&ex_vector);
+
+    // Build categories.
+    auto categories = input_json["categories"];
+    for (auto it = categories.begin(); it != categories.end(); it++) {
+        string cat_name = (*it)["name"];
+        auto fb_cat_name = builder.CreateString(cat_name);
+        uint16_t cat_id = (*it)["id"];
+
+        // Create the example id vector
+        std::vector<uint64_t> img_ids;
+        cout << "Category " << cat_id << " ids: ";
+        for (auto set_it = catIdToExampleIdSet[cat_id].begin();
+             set_it != catIdToExampleIdSet[cat_id].end(); set_it++) {
+            img_ids.push_back(imgIdRemap[*set_it]);
+            cout << imgIdRemap[*set_it] << " ";
+        }
+        cout << endl;
+
+        auto fb_cat_ex = builder.CreateVector(img_ids);
+        auto cat = CreateCategory(builder, fb_cat_name, cat_id, fb_cat_ex,
+                                  img_ids.size(), img_ids.size());
+        cat_vector.push_back(cat);
+    }
+    auto fb_cats = builder.CreateVectorOfSortedTables(&cat_vector);
+
+    cout << "Serialized categories in " << Tick() << " msec." << endl;
 
     cout << "Serialized images in " << Tick() << " msec." << endl;
 

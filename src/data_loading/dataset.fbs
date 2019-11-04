@@ -10,6 +10,9 @@ struct BoundingBox {
 table Category {
     name:string;
     id:ushort(key);
+    examples:[ulong];
+    num_images:ulong;
+    num_anns:ulong;
 }
 
 table Annotation {
@@ -22,11 +25,12 @@ table Annotation {
 
 table Example {
     file_name:string;
-    id:ulong (key);    
+    id:ulong;    
     annotations:[Annotation];
     image:[ubyte];
     width:ulong;
     height:ulong;
+    idx:ulong(key);
 }
 
 table Dataset {
