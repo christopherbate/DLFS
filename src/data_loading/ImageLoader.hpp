@@ -49,7 +49,7 @@ class ImageLoader {
      */
     std::vector<ImageInfo>
     BatchDecodeJPEG(const std::vector<std::vector<uint8_t>> &buffer,
-                    TensorPtr<uint8_t> imgBatchTensor,
+                    TensorPtr<uint8_t> &imgBatchTensor,
                     unsigned int maxHostThread = 4);
 
     /**

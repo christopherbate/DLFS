@@ -46,12 +46,12 @@ ImageLoader::ImageLoader() {
 }
 
 ImageLoader::~ImageLoader() {
+    checkCudaErrors(nvjpegEncoderParamsDestroy(m_encoderParams));
+    checkCudaErrors(nvjpegEncoderStateDestroy(m_encoderState));
     checkCudaErrors(nvjpegJpegStateDestroy(m_jpegState));
     checkCudaErrors(nvjpegDestroy(m_jpegHandle));
-    checkCudaErrors(cudaStreamDestroy(m_stream));
-    checkCudaErrors(nvjpegEncoderStateDestroy(m_encoderState));
-    checkCudaErrors(cudaStreamDestroy(m_encoderStream));
-    checkCudaErrors(nvjpegEncoderParamsDestroy(m_encoderParams));
+    checkCudaErrors(cudaStreamDestroy(m_stream));    
+    checkCudaErrors(cudaStreamDestroy(m_encoderStream));    
 }
 
 /**
@@ -115,7 +115,7 @@ void ImageLoader::AllocateBuffers(std::vector<ImageInfo> &imgInfos,
  */
 std::vector<ImageInfo>
 ImageLoader::BatchDecodeJPEG(const vector<vector<uint8_t>> &buffers,
-                             TensorPtr<uint8_t> imgBatchTensor,
+                             TensorPtr<uint8_t> &imgBatchTensor,
                              unsigned int maxHostThread) {
     std::vector<size_t> imgLengths;
     std::vector<ImageInfo> imgInfoBufs(buffers.size());
