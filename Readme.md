@@ -1,29 +1,48 @@
 # Deep Learning from Scratch
 
-
-[Project Overview Presentation](https://docs.google.com/presentation/d/13iccyzgeLPLY2YbbjRyn206PnmnWebZJnQ1kIaA85Uk/edit?usp=sharing)
-
+[Overview Presentation](https://docs.google.com/presentation/d/13iccyzgeLPLY2YbbjRyn206PnmnWebZJnQ1kIaA85Uk/edit?usp=sharing)
 
 A deep learning C++ library built on CUDNN. The aim of this library is to provide simple interfaces to build deep learning 
-alogorithms (mostly object detection) while maximizing speed and the latest features provided by NVIDIA RTX/Turing cards.
+alogorithms primarily for computer vision in a small, flexible package.
 
+Priorities:
+1. Support the latest capabilities offered by RTX cards. 
+2. Simple code base
+3. (Future) Optimized embedded runtime.
+
+## Roadmap 
+
+Done: 
+
+1. Basic add/sub/mul/power operations
+2. Autodiff (single threaded)
+3. Data loading / batching using NvJPEG (single thread)
+
+In Progress:
+
+1. Fully working MNIST "hello world"
+2. Multithreaded batch loader
+3. ResNet example
+4. RetinaNet example
+5. Serialization
 
 # Prerequisites
 
-This library is GPU only. You must have a system with an NVIDIA GPU card, preferably a recent card. 
+This library is GPU only. You must have a system with an NVIDIA GPU.
 
 We develop on Ubuntu 19.04 systems with Intel CPUs and RTX 2080 series cards. Recommend 
 you isolate your development environment from the various other software that are trying 
-to manipulate CUDA libraries and runtimes (e.g. `conda`).
+to manipulate CUDA libraries and runtimes (e.g. conda).
 
 Requires :
 - Nvidia driver (we're on 418)
-- CUDA >= 10.1 (we're developing on the bleeding edge, `cuda_10.1.243`. We install with the `run` file on 19.04)
-- CuDNN 7.6.3 (recommend installing manually with the `tar` file, not the `deb`)
+- CUDA >= 10.1 (we're developing on `cuda_10.1.243` installed with the `run` file on 19.04)
+- CuDNN 7.6.3 
 - NvJPEG
 - flatbuffer compiler (see below)
 - cmake
 - COCO 2017 images and labels (see below)
+- Lodepng (put in src/external/lodepng/lodepng.h)
 
 ## flatbufferc
 When setting up a new environment, you must clone and build Google's flatbuffer compiler.
@@ -53,6 +72,13 @@ unzip annotations_trainval2017.zip
 
 Build is provided by `make`. Binaries go into `bin`.
 
+# Test
+
+Run:
+
+```./bin/test```
+
+The testing entrypoint is `src/UnitTest.cpp`. 
 
 # Quickstart 
 
@@ -79,53 +105,10 @@ For inference, you need the following things:
 2. A method for feeding data to the models efficiently.
 3. Excellent logging and monitoring for production
 
-This repo intends to provide all of the above in a compact library for object detection models, focusing 
-on fast turn-around between data collection, labeling, training, inference, back to labeling. It provides serialized formats for streaming predictions and labels to/from an system during training for effective real-time training. To do this, we leverage CuDNN for nearly all primitives within the deep learning engine, resulting in a simple, highly performant, readable and maintainable code base. 
+The goal is to provide all of the above in a compact library for computer vision models, focusing 
+on fast turn-around between data collection, labeling, training, inference, back to labeling. It will provide serialized formats for streaming predictions and labels to/from an system during training for effective real-time training. To do this, we leverage CuDNN for nearly all primitives within the deep learning engine, resulting in a simple, highly performant, readable and maintainable code base. 
 
-Unlike general deep learning frameworks such as PyTorch and Tensorflow, this library is completely biased towards vision systems. There are only a small set of operations which are implemented (e.g. convolution), but they are finely tuned for speed and the latest features (e.g. mixed-precision training) and research (so we have new kidnds of convolution such as seperable convolution, etc.). There are basic primitives for bounding box operations for dense anchor-based systems as well as post-processing functions such as Non-Max Suppression. 
+Unlike general deep learning frameworks such as PyTorch and Tensorflow, this library is completely biased towards vision systems. There are only a small set of operations which are implemented (e.g. convolution), but they are finely tuned for speed and the latest features (e.g. mixed-precision training) and research. There will b e basic primitives for bounding box operations for dense anchor-based systems as well as post-processing functions such as Non-Max Suppression. 
 
-Futhermore, we assume all input data is in the form of images which will be turned into 3-channel tensors. There is no notion of general n-d tensor operations like in Tensorflow, PyTorch and Numpy. Nevertheless, a great deal of interesting models and research questions can be tackled within this framework, all within a simple system that can take the model into "production" environments.
-
-The following sections detail components in detail and walkthrough the creation and training of a system trained on MS COCO.
-
-## Data, Annotations, and Augmentation
-
-In this system, the raw training data consists of a set of binary objects sitting in a datstore. Two forms are supported: local disk and GCP Cloud Storage, but extending to other systems is as simple as implementing the abstract `DataSource` class. Labels/annotations and image meta-data are stored in some sort of database allowing for efficient querying and maintainability, and the interface is defined by the abstract `AnnotationStore` class. Currently, `SQLiteAnnStore` is the only implementation. The `AnnotationStore` conatains image metadata to allow the data-loading functions to pull binary objects from `DataSource`.
-
-We must load binary objects from the `DataSource` and preprocess them into a form which can be consumed by the model. How we do this depends on whether performing pre-processing up front will bottleneck our ability to feed the model. For example, we might want to pre-store all the JPEGs into some serialized format where normalization and augmentation has already taken place. We handle this as follows:
-
-The `DataLoader` module is an abstract base class takes meta-data from the `AnnotationStore` and pulls binary objects from `DataSource` and provides the minimal set of functions that must be implemented for the data loading:
-1. A method `get_batch` that returns the next batch of examples.
-2. A method `length` that returns the number of total examples in the dataset.
-3. A vector of operations which define pre-processing. 
-
-There are two options for using the output of `DataLoader`: you can either feed the model 
-during training by directly calling `get_batch`, or you can serialize the batch outputs so that all pre-processing 
-does not need to re-occur. See the tutorial program `01_data_loading.cpp` for examples of how to do both.
-
-## Models
-
-
-## Training
-
-Training provides a single optimizer: SGD with momentum, which is the most commonly used optimizer in large frameworks for training object detection models. The trainer has built-in learning rate optimization strategies and is configured in an iteration-based scheme. So it is up to the user to calculate the number of iterations from epochs if so desired.
-
-## Serializing the model for checkpoints or inference
-
-
-## Outputing visualizations
-
-
-## Predictions format
-
-
-## Batch Inference
-
-
-## Inference Service
-
-## TODO:
-
-1. Tensor data types for cudnn initialized always to float... this obviously needs to change.
-2. AD Context needs a mutex(es) on the operation and tensorptr vectors
+Futhermore, we assume all input data is in the form of images which will be turned into 3-channel tensors. There is no notion of general n-d tensor operations like in Tensorflow, PyTorch and Numpy. There is no support for general slicing of arrays either. Nevertheless, a great deal of interesting models and research questions can be tackled within this framework, all within a simple system that can take the model into "production" environments.
 
