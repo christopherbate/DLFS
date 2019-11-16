@@ -75,6 +75,7 @@ $(DIRS):
 ./src/data_loading/dataset_generated.h: ./src/data_loading/dataset.fbs
 	$(FLAT_C) --cpp --gen-mutable -o ./src/data_loading/ ./src/data_loading/dataset.fbs 
 	$(FLAT_C) --python -o ./src/data_loading/fbs_python/ ./src/data_loading/dataset.fbs
+	$(FLAT_C) --go -o ./src/data_loading/fbs_go/ ./src/data_loading/dataset.fbs
 
 clean:
 	rm -rf $(DIRS) $(FLATBUFFERS) $(DEPS)
