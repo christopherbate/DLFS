@@ -123,15 +123,6 @@ int writeBMPi(const char *filename, const unsigned char *d_RGB, int pitch,
  */
 void WriteImageTensorBMP(const char *filename, TensorPtr<uint8_t> imageTensor);
 
-/**
- * Saves a tensor as a PNG
- *
- * Automatically performs greyscale conversion
- * if single-channel
- */
-void WriteImageTensorPNG(const std::string &filename,
-                         TensorPtr<uint8_t> imageTensor);
-
 } // namespace DLFS
 
 #endif // !IMAGE_H

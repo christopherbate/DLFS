@@ -5,8 +5,6 @@
 #include "../tensor/Tensor.hpp"
 #include "ImageLoader.hpp"
 
-#include "external/lodepng/lodepng.h"
-
 #include <cassert>
 #include <cuda_runtime.h>
 
@@ -342,25 +340,4 @@ void DLFS::WriteImageTensorBMP(const char *filename,
     auto shape = imageTensor->GetShape();
     writeBMPi(filename, imageTensor->GetDevicePointer(), 3 * shape[2], shape[2],
               shape[1]);
-}
-
-void DLFS::WriteImageTensorPNG(const std::string &filename,
-                               TensorPtr<uint8_t> imageTensor) {
-    vector<uint8_t> buffer;
-    imageTensor->CopyBufferToHost(buffer);
-
-    auto shape = imageTensor->GetShape();
-
-    if (shape[3] == 3) {
-        // Case 1 - RGB (8bit per color) encode
-        lodepng_encode24_file(filename.c_str(), buffer.data(), shape[2],
-                              shape[1]);
-    } else if (shape[3] == 1) {
-        // Case 2 - Greyscale encode 8bit one color
-        lodepng_encode_file(filename.c_str(), buffer.data(), shape[2], shape[1],
-                            LCT_GREY, 8);
-    } else {
-        throw std::runtime_error("To PNG-encode images, they must have 3 "
-                                 "channels (RGB) or 1 channel (gray)");
-    }
 }
