@@ -28,7 +28,7 @@ template <typename T> class ActivationOp : public BaseOperation {
         checkCudaErrors(cudnnDestroyActivationDescriptor(m_activationDesc));
     }
 
-    void ExecuteForward() {
+    TensorPtr<T> ExecuteForward() {
         assert(m_input != nullptr);
         assert(m_output != nullptr);
 
@@ -38,7 +38,9 @@ template <typename T> class ActivationOp : public BaseOperation {
             m_input->GetTensorDesc(), m_input->GetDevicePointer(), &blend[1],
             m_output->GetTensorDesc(), m_output->GetDevicePointer()));
 
-        cudaDeviceSynchronize();
+        checkCudaErrors(cudaDeviceSynchronize());
+
+        return m_output;
     }
 
     void ExecuteBackward() {
@@ -52,12 +54,10 @@ template <typename T> class ActivationOp : public BaseOperation {
             GPUContext.GetCUDNNHandle(), m_activationDesc, &blend[0],
             m_output->GetTensorDesc(), m_output->GetDevicePointer(),
             m_output->GetTensorDesc(), m_output->GetGradPointer(),
-            m_input->GetTensorDesc(), m_output->GetDevicePointer(),
-            &blend[1],
+            m_input->GetTensorDesc(), m_output->GetDevicePointer(), &blend[1],
             m_input->GetTensorDesc(), m_input->GetGradPointer()));
 
-        cudaDeviceSynchronize();
-
+        checkCudaErrors(cudaDeviceSynchronize());
         m_input->IncrementBackwardPass();
     }
 
@@ -77,5 +77,12 @@ template <typename T> class ActivationOp : public BaseOperation {
 };
 
 template <typename T> using ActivationOpPtr = std::shared_ptr<ActivationOp<T>>;
+
+template <typename T>
+TensorPtr<T> MakeActivation(TensorPtr<T> input){
+    auto op = std::make_shared<ActivationOp<T>>();
+    auto output = op->ExecuteForward();
+    return output;
+}
 
 } // namespace DLFS
