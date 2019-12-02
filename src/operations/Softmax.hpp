@@ -54,7 +54,7 @@ private:
 
         const float blend[2] = {1.0, 0.0};
 
-        LOG.INFO() << "Executing Softmax kernel.";
+        LOG.DEBUG() << "Executing Softmax kernel.";
 
         checkCudaErrors(cudnnSoftmaxForward(
             GPUContext.GetCUDNNHandle(),
