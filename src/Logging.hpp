@@ -3,123 +3,98 @@
 #include <iostream>
 #include <string>
 
-#include <nvjpeg.h>
-#include <cudnn.h>
 #include <cublas.h>
+#include <cudnn.h>
+#include <nvjpeg.h>
 
 const char *cudaGetErrorName(nvjpegStatus_t error);
 const char *cudaGetErrorName(cudnnStatus_t error);
 const char *cudaGetErrorName(cublasStatus_t error);
 
-namespace DLFS
-{
+namespace DLFS {
 
-class DLFSError : public std::runtime_error
-{
-public:
-	DLFSError(const std::string &msg) : std::runtime_error(msg)
-	{
-		m_errorMsg = msg;
-	}
-	const char *what() const throw()
-	{
-		return m_errorMsg.c_str();
-	}
+class DLFSError : public std::runtime_error {
+  public:
+    DLFSError(const std::string &msg) : std::runtime_error(msg) {
+        m_errorMsg = msg;
+    }
+    const char *what() const throw() { return m_errorMsg.c_str(); }
 
-private:
-	std::string m_errorMsg;
+  private:
+    std::string m_errorMsg;
 };
 
-enum LogLevel
-{
-	Debug,
-	Info,
-	Warn,
-	Error
-};
+enum LogLevel { Debug, Info, Warn, Error };
 
-class LoggingUtility
-{
-public:
-	LoggingUtility() {}
-	~LoggingUtility()
-	{
-		if (m_opened)
-		{
-			std::cout << std::endl;
-		}
-		m_opened = false;
-	}
+class LoggingUtility {
+  public:
+    LoggingUtility() {}
+    ~LoggingUtility() {
+        if (m_opened) {
+            std::cout << std::endl;
+        }
+        m_opened = false;
+    }
 
-	template <class T>
-	LoggingUtility &operator<<(const T &msg)
-	{
-		if (m_msgLevel >= m_minLevel)
-		{
-			std::cout << msg << " ";
-			m_opened = true;
-		}
-		return *this;
-	}
+    template <class T> LoggingUtility &operator<<(const T &msg) {
+        if (m_msgLevel >= m_minLevel) {
+            std::cout << msg << " ";
+            m_opened = true;
+            if (m_msgLevel == Debug) {
+                std::cout << std::flush;
+            }
+        }
+        return *this;
+    }
 
-	void SetMinLevel(LogLevel l)
-	{
-		m_minLevel = l;
-	}
+    void SetMinLevel(LogLevel l) { m_minLevel = l; }
 
-	void PrintPrefix()
-	{
-		if(m_msgLevel >= m_minLevel)
-			std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
-	}
+    void PrintPrefix() {
+        if (m_msgLevel >= m_minLevel)
+            std::cout << "\n[" << GetLabel(m_msgLevel) << "] ";
+    }
 
-	LoggingUtility &WARN()
-	{
-		m_msgLevel = Warn;
-		PrintPrefix();
-		return *this;
-	}
-	LoggingUtility &INFO()
-	{
-		m_msgLevel = Info;
-		PrintPrefix();
-		return *this;
-	}
-	LoggingUtility &DEBUG()
-	{
-		m_msgLevel = Debug;
-		PrintPrefix();
-		return *this;
-	}
-	LoggingUtility &ERROR()
-	{
-		m_msgLevel = Error;
-		PrintPrefix();
-		return *this;
-	}
+    LoggingUtility &WARN() {
+        m_msgLevel = Warn;
+        PrintPrefix();
+        return *this;
+    }
+    LoggingUtility &INFO() {
+        m_msgLevel = Info;
+        PrintPrefix();
+        return *this;
+    }
+    LoggingUtility &DEBUG() {
+        m_msgLevel = Debug;
+        PrintPrefix();
+        return *this;
+    }
+    LoggingUtility &ERROR() {
+        m_msgLevel = Error;
+        PrintPrefix();
+        return *this;
+    }
 
-private:
-	bool m_opened{false};
+  private:
+    bool m_opened{false};
 
-	LogLevel m_msgLevel{Warn};
-	LogLevel m_minLevel{Warn};
+    LogLevel m_msgLevel{Warn};
+    LogLevel m_minLevel{Warn};
 
-	inline const char *GetLabel(LogLevel level)
-	{
-		switch (level)
-		{
-		case Debug:
-			return "DEBUG";
-		case Info:
-			return "INFO";
-		case Warn:
-			return "WARN";
-		case Error:
-			return "ERROR";
-		default:
-			return "INFO";
-		}
-	}
+    inline const char *GetLabel(LogLevel level) {
+        switch (level) {
+        case Debug:
+            return "DEBUG";
+        case Info:
+            return "INFO";
+        case Warn:
+            return "WARN";
+        case Error:
+            return "ERROR";
+        default:
+            return "INFO";
+        }
+    }
 };
 
 // Global Logging Util
@@ -127,16 +102,14 @@ extern LoggingUtility LOG;
 
 template <typename T>
 void checkWithException(T result, const char *func, const char *file,
-						int const line)
-{
-	if (result)
-	{
-		std::string errorMsg =
-			"CUDA error at " + std::string(file) + ":" + std::to_string(line) + " code = " +
-			std::to_string(static_cast<unsigned int>(result)) +
-			" " + cudaGetErrorName(result) + " " + std::string(func);
-		throw DLFS::DLFSError(errorMsg);
-	}
+                        int const line) {
+    if (result) {
+        std::string errorMsg =
+            "CUDA error at " + std::string(file) + ":" + std::to_string(line) +
+            " code = " + std::to_string(static_cast<unsigned int>(result)) +
+            " " + cudaGetErrorName(result) + " " + std::string(func);
+        throw DLFS::DLFSError(errorMsg);
+    }
 }
 
 #ifdef __DRIVER_TYPES_H__
