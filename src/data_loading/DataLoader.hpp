@@ -26,13 +26,12 @@
 #include "ImageLoader.hpp"
 #include "../tensor/TensorList.hpp"
 
-#define DATALOADER_PIPELINE_SIZE 5
-
 namespace DLFS
 {
 
-typedef std::tuple<TensorPtr<uint8_t>, TensorPtr<float>, TensorPtr<uint16_t>> ObjDetExampleBatch;
+typedef std::tuple<TensorPtr<uint8_t>, TensorPtr<float>, TensorPtr<uint32_t>> ObjDetExampleBatch;
 typedef std::array<float, 4> BBoxArray;
+constexpr unsigned int DataloaderPipelineSize = 5;
 
 class DataLoader
 {

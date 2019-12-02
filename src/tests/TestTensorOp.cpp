@@ -2,7 +2,7 @@
 #include "UnitTest.hpp"
 #include "operations/Convolution.hpp"
 #include "operations/TensorOp.hpp"
-#include "tensor/AutoDiff.hpp"
+
 #include "tensor/Tensor.hpp"
 #include "tensor/TensorList.hpp"
 
@@ -110,7 +110,7 @@ void TestTensorOp() {
         "Tensor Op", "Tensor op add a vector to itself.", []() {
             ADContext.Reset();
 
-            auto t1 = ADContext.CreateTensor({1, 4, 4, 1}, "tensor1", 1.0f);
+            auto t1 = CreateTensor({1, 4, 4, 1}, "tensor1", 1.0f);
 
             TensorOpPtr<float> addOp =
                 make_shared<TensorOp<float>>(PointwiseOpType::PW_ADD);
@@ -133,7 +133,7 @@ void TestTensorOp() {
         "Tensor Op", "Tensor op add a vector's gradient to itself..", []() {
             ADContext.Reset();
 
-            auto t1 = ADContext.CreateTensor({1, 4, 4, 1}, "tensor1", 1.0f);
+            auto t1 = CreateTensor({1, 4, 4, 1}, "tensor1", 1.0f);
 
             t1->FillConstantGrad(0.1f);
 

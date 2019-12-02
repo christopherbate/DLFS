@@ -13,13 +13,13 @@ extern "C" void
 LaunchSigmoidCEKernel(CustomOpDataType dataType, TensorShape logitShape,
                       const void *logits, TensorShape labelShape,
                       const void *labels, TensorShape outputShape,
-                      const void *output);
+                      const void *output, bool reduce_mean);
 
 extern "C" void
 LaunchSigmoidCEBackwardKernel(CustomOpDataType dataType, TensorShape logitShape,
                               void *logits, TensorShape labelShape,
                               void *labels, TensorShape outputShape,
-                              void *output);
+                              void *output, bool reduce_mean);
 
 /**
  * Implments SigmoidCrossEntropyLoss
@@ -55,31 +55,32 @@ template <typename T> class SigmoidCrossEntropyOp : public BaseOperation {
 
     inline void SetLogits(TensorPtr<T> p) { m_inputA = p; }
 
-    inline void SetLabels(TensorPtr<uint16_t> p) { m_labelTensor = p; }
+    inline void SetLabels(TensorPtr<uint32_t> p) { m_labelTensor = p; }
 
-    inline void SetOutput(TensorPtr<T> p) { m_output = p; }
+    inline void SetOutput(TensorPtr<T> p) { m_output = p; }    
 
     /**
      * Enables mean-reduction immediately after calculating the loss.
      */
-    void SetReduceMean() {}
+    void SetReduceMean(bool reduce_mean) {m_reduceMean = reduce_mean;}
 
   private:
     TensorPtr<T> m_inputA{nullptr};
-    TensorPtr<uint16_t> m_labelTensor{nullptr};
+    TensorPtr<uint32_t> m_labelTensor{nullptr};
     TensorPtr<T> m_output{nullptr};
-    bool m_reduceMean{false};
+    bool m_reduceMean{true};
 
   private:
     void Forward() {
         assert(m_inputA != nullptr);
         assert(m_labelTensor != nullptr);
         assert(m_output != nullptr);
+        // m_output = CreateTensor
 
         LaunchSigmoidCEKernel(
             Float, m_inputA->GetShape(), m_inputA->GetDevicePointer(),
             m_labelTensor->GetShape(), m_labelTensor->GetDevicePointer(),
-            m_output->GetShape(), m_output->GetDevicePointer());
+            m_output->GetShape(), m_output->GetDevicePointer(), m_reduceMean);
 
         cudaDeviceSynchronize();
     }
@@ -93,7 +94,7 @@ template <typename T> class SigmoidCrossEntropyOp : public BaseOperation {
         LaunchSigmoidCEBackwardKernel(
             Float, m_inputA->GetShape(), m_inputA->GetDevicePointer(),
             m_labelTensor->GetShape(), m_labelTensor->GetDevicePointer(),
-            m_output->GetShape(), m_inputA->GetGradPointer());
+            m_output->GetShape(), m_inputA->GetGradPointer(), m_reduceMean);
         cudaDeviceSynchronize();
         m_inputA->IncrementBackwardPass();
     }

@@ -76,23 +76,7 @@ void TestDataLoader()
 
             avgTime = avgTime / 2.0;
             LOG.INFO() << "Average image decode time (2 imgs): " << avgTime
-                       << " msec";
-
-            auto count = 0;
-            avgTime = 0.0;
-            timer.tick();
-            for (auto devPtr : imgBatchTensor->GetIterablePointersOverBatch())
-            {
-                auto tensorShape = imgBatchTensor->GetShape();
-                string fileName = "./data/JpegLoad_non_batch_test_" + to_string(count) + ".bmp";
-                writeBMPi(fileName.c_str(), devPtr,
-                          3 * tensorShape[2], tensorShape[2], tensorShape[1]);
-                avgTime += timer.tick();
-                count++;
-            }
-            avgTime = avgTime / 2.0;
-            LOG.INFO() << "Average image write time (2 imgs): " << avgTime
-                       << " msec";
+                       << " msec";           
         });
 
     TestRunner::GetRunner()->AddTest(

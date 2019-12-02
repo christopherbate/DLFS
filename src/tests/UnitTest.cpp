@@ -58,6 +58,7 @@ int main()
     TestSoftmax();
     TestActivation();
     TestImage();
+    TestNetwork();
 
     TestRunner::GetRunner()->Run();
     TestRunner::GetRunner()->PrintSummary();

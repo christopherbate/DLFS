@@ -2,7 +2,6 @@
 #include "UnitTest.hpp"
 #include "tensor/Tensor.hpp"
 #include "tensor/TensorList.hpp"
-#include "tensor/AutoDiff.hpp"
 #include "operations/Convolution.hpp"
 #include "GPU.hpp"
 

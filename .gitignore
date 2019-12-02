@@ -3,3 +3,5 @@ bin
 .vscode
 .build
 datasets
+*.go
+*.py

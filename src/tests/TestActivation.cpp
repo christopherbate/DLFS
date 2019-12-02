@@ -1,7 +1,7 @@
 #include "GPU.hpp"
 #include "QuickTestCPP.h"
 #include "UnitTest.hpp"
-#include "tensor/AutoDiff.hpp"
+
 #include "tensor/Tensor.hpp"
 
 using namespace DLFS;
@@ -13,7 +13,7 @@ void TestActivation() {
         "Activation Op", "ReLU activation forward, pos", []() {
             TensorShape shape = {1, 3, 3, 1};
             TensorPtr<float> inputA =
-                ADContext.CreateTensor<float>(shape, "reluInput", 1.1f, true);
+                CreateTensor<float>(shape, "reluInput", 1.1f, true);
 
             auto output = inputA->ReLU();
 
@@ -30,7 +30,7 @@ void TestActivation() {
         "Activation Op", "ReLU activation forward, neg", []() {
             TensorShape shape = {1, 3, 3, 1};
             TensorPtr<float> inputA =
-                ADContext.CreateTensor<float>(shape, "reluInput", -1.1f, true);
+                CreateTensor<float>(shape, "reluInput", -1.1f, true);
 
             auto output = inputA->ReLU();
 
@@ -49,7 +49,7 @@ void TestActivation() {
 
             TensorShape shape = {1, 1, 1, 2};
             TensorPtr<float> inputA =
-                ADContext.CreateTensor<float>(shape, "reluInput", 1.0f, true);
+                CreateTensor<float>(shape, "reluInput", 1.0f, true);
             vector<float> fill = {-1.0f, 2.0f};
             inputA->CopyBufferToDevice(fill);
 
