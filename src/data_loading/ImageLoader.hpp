@@ -71,36 +71,36 @@ class ImageLoader {
 
     /**
      * Encoder a single jpeg
+     * Image must be in (1 H W 3) shape
      */
-    template <typename T>
     void EncodeJPEG(TensorPtr<uint8_t> imgTensor, const std::string &filename) {
         std::vector<uint8_t> hostBuffer;
-        imgTensor->CopyBufferToHost(hostBuffer);
         auto shape = imgTensor->GetShape();
 
         nvjpegImage_t src;
-        src.channel[0] = (uint8_t *)hostBuffer.data();
-        src.pitch[0] = shape[2]*3;
+        src.channel[0] = imgTensor->GetDevicePointer();
+        src.pitch[0] = shape[2] * 3;
 
-        nvjpegEncodeImage(m_jpegHandle, m_encoderState, m_encoderParams, &src,
-                          NVJPEG_INPUT_RGB, shape[2], shape[1],
-                          m_encoderStream);
+        checkCudaErrors(nvjpegEncodeImage(
+            m_jpegHandle, m_encoderState, m_encoderParams, &src,
+            NVJPEG_INPUT_RGBI, shape[2], shape[1], m_encoderStream));
 
-        size_t length;
-        nvjpegEncodeRetrieveBitstream(m_jpegHandle, m_encoderState, NULL,
-                                      &length, 0);
+        size_t length = 0;
+        checkCudaErrors(nvjpegEncodeRetrieveBitstream(
+            m_jpegHandle, m_encoderState, NULL, &length, m_encoderStream));
         hostBuffer.resize(length);
-        nvjpegEncodeRetrieveBitstream(m_jpegHandle, m_encoderState,
-                                      hostBuffer.data(), &length, 0);
+        checkCudaErrors(nvjpegEncodeRetrieveBitstream(
+            m_jpegHandle, m_encoderState, hostBuffer.data(), &length,
+            m_encoderStream));
 
-        cudaStreamSynchronize(m_encoderStream);
+        checkCudaErrors(cudaStreamSynchronize(m_encoderStream));
 
         try {
             std::ofstream outfile(filename, std::ios::binary | std::ios::out);
             outfile.write((char *)hostBuffer.data(), length);
             outfile.close();
         } catch (std::exception &e) {
-            LOG.ERROR() << "Failed to write jpeg output " << e.what();
+            LOG.ERROR() << "Failed to write JPEG encoded image to file " << e.what();
         }
     }
 
@@ -113,15 +113,6 @@ class ImageLoader {
     nvjpegEncoderState_t m_encoderState;
     cudaStream_t m_encoderStream;
 };
-
-int writeBMPi(const char *filename, const unsigned char *d_RGB, int pitch,
-              int width, int height);
-
-/**
- * Saves a tensor as a BMP
- * Must have 3 channels (RGB)
- */
-void WriteImageTensorBMP(const char *filename, TensorPtr<uint8_t> imageTensor);
 
 } // namespace DLFS
 
