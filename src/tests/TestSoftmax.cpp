@@ -1,7 +1,7 @@
 #include "QuickTestCPP.h"
 #include "UnitTest.hpp"
 #include "operations/Softmax.hpp"
-#include "tensor/AutoDiff.hpp"
+
 #include "tensor/Tensor.hpp"
 #include "tensor/TensorList.hpp"
 
@@ -14,7 +14,7 @@ void TestSoftmax() {
     TestRunner::GetRunner()->AddTest("Softmax Op", "Softmax Op Forward", []() {
         TensorShape shape = {1, 1, 1, 10};
         TensorPtr<float> inputA =
-            ADContext.CreateTensor<float>(shape, "softmaxInputTest", 1.0);
+            CreateTensor<float>(shape, "softmaxInputTest", 1.0);
 
         auto output = inputA->Softmax();
 
@@ -35,13 +35,13 @@ void TestSoftmax() {
 
             // Test with both positive and negative logits
             TensorPtr<float> inputA =
-                ADContext.CreateTensor<float>(shape, "tensorA", 1.0);
+                CreateTensor<float>(shape, "tensorA", 1.0);
             TensorPtr<float> inputB =
-                ADContext.CreateTensor<float>(shape, "tensorA", -1.0);
+                CreateTensor<float>(shape, "tensorA", -1.0);
 
-            std::vector<uint16_t> labelBuffer = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4};
+            std::vector<uint32_t> labelBuffer = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4};
 
-            TensorPtr<uint16_t> labels = ADContext.CreateTensor<uint16_t>(
+            TensorPtr<uint32_t> labels = CreateTensor<uint32_t>(
                 labelShape, "labels", 0.0, false);
             labels->CopyBufferToDevice(labelBuffer);
 
@@ -70,12 +70,11 @@ void TestSoftmax() {
                         QTAlmostEqual(bufferNeg[i * 5 + j], posLoss, 1e-3);
                     }
                 }
-            }         
+            }
         });
 
-      TestRunner::GetRunner()->AddTest(
-        "Sigmoid Cross Entropy Op", "Sigmoid Cross Entropy Backward",
-        []() {
+    TestRunner::GetRunner()->AddTest(
+        "Sigmoid Cross Entropy Op", "Sigmoid Cross Entropy Backward", []() {
             ADContext.Reset();
 
             TensorShape shape = {10, 1, 1, 5};
@@ -83,18 +82,18 @@ void TestSoftmax() {
 
             // Test with both positive and negative logits
             TensorPtr<float> inputA =
-                ADContext.CreateTensor<float>(shape, "tensorA", 1.0);
+                CreateTensor<float>(shape, "tensorA", 1.0);
 
-            std::vector<uint16_t> labelBuffer = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4};
+            std::vector<uint32_t> labelBuffer = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4};
 
-            TensorPtr<uint16_t> labels = ADContext.CreateTensor<uint16_t>(
+            TensorPtr<uint32_t> labels = CreateTensor<uint32_t>(
                 labelShape, "labels", 0.0, false);
             labels->CopyBufferToDevice(labelBuffer);
 
             auto loss = inputA->SigmoidCELoss(labels);
-            
+
             ADContext.CalcGradient(loss);
-        
+
             vector<float> posGradBuffer;
             inputA->CopyGradBufferToHost(posGradBuffer);
 
@@ -104,7 +103,7 @@ void TestSoftmax() {
             for (int i = 0; i < 10; i++) {
                 for (int j = 0; j < 5; j++) {
                     if (i % 5 == j) {
-                        QTAlmostEqual(posGradBuffer[i * 5 + j], posGrad, 1e-3);                        
+                        QTAlmostEqual(posGradBuffer[i * 5 + j], posGrad, 1e-3);
                     } else {
                         QTAlmostEqual(posGradBuffer[i * 5 + j], negGrad, 1e-3);
                     }

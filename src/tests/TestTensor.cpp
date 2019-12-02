@@ -2,59 +2,48 @@
 #include "UnitTest.hpp"
 #include "tensor/Tensor.hpp"
 #include "tensor/TensorList.hpp"
-#include "tensor/AutoDiff.hpp"
 
 using namespace DLFS;
 using namespace std;
 
-void TestTensor()
-{
+void TestTensor() {
     TestRunner::GetRunner()->AddTest(
-        "Tensor",
-        "Can allocate and deallocate tensor.",
-        []() {
+        "Tensor", "Can allocate and deallocate tensor.", []() {
             ADContext.Reset();
 
             Tensor<float> tensor;
             tensor.SetShape(1, 10, 10, 3);
 
             QTEqual(tensor.GetDevicePointer(), nullptr);
-            QTEqual(tensor.GetPitch(), (size_t)4);
 
             tensor.AllocateIfNecessary();
 
-            QTEqual(tensor.GetExpectedSize(), 4 * 10 * 10 * 3);
+            QTEqual(tensor.GetSizeBytes(), 4 * 10 * 10 * 3);
             QuickTest::NotEqual(tensor.GetDevicePointer(), nullptr);
         });
 
-    TestRunner::GetRunner()->AddTest(
-        "Tensor",
-        "Can create TensorPtr",
-        []() {
-            ADContext.Reset();
+    TestRunner::GetRunner()->AddTest("Tensor", "Can create TensorPtr", []() {
+        ADContext.Reset();
 
-            // First api
+        // First api
 
-            TensorPtr<float> tensor = std::make_shared<Tensor<float>>();
-            tensor->SetShape(1, 128, 128, 3);
+        TensorPtr<float> tensor = std::make_shared<Tensor<float>>();
+        tensor->SetShape(1, 128, 128, 3);
 
-            QuickTest::Equal(tensor->GetDevicePointer(), nullptr);
-            QuickTest::Equal(tensor->GetPitch(), 4);
+        QuickTest::Equal(tensor->GetDevicePointer(), nullptr);
 
-            tensor->AllocateIfNecessary();
+        tensor->AllocateIfNecessary();
 
-            QuickTest::NotEqual(tensor->GetDevicePointer(), nullptr);
+        QuickTest::NotEqual(tensor->GetDevicePointer(), nullptr);
 
-            // AD Api
-            TensorPtr<float> tensor2 = ADContext.CreateTensor<float>(TensorShape({1, 128, 128, 3}),
-                                                                     "TestTensor", 0.1, false);
-            QuickTest::NotEqual(tensor2->GetDevicePointer(), nullptr);
-        });
+        // AD Api
+        TensorPtr<float> tensor2 = CreateTensor<float>(
+            TensorShape({1, 128, 128, 3}), "TestTensor", 0.1, false);
+        QuickTest::NotEqual(tensor2->GetDevicePointer(), nullptr);
+    });
 
     TestRunner::GetRunner()->AddTest(
-        "Tensor",
-        "Can use constant fill initialization.",
-        []() {
+        "Tensor", "Can use constant fill initialization.", []() {
             ADContext.Reset();
             TensorPtr<float> tensor = std::make_shared<Tensor<float>>();
             tensor->SetShape(1, 100, 100, 3);
@@ -64,18 +53,15 @@ void TestTensor()
             vector<float> buffer(tensor->GetLinearSize());
 
             cudaMemcpy(buffer.data(), tensor->GetDevicePointer(),
-                       tensor->GetExpectedSize(), cudaMemcpyDeviceToHost);
+                       tensor->GetSizeBytes(), cudaMemcpyDeviceToHost);
 
-            for (auto val : buffer)
-            {
+            for (auto val : buffer) {
                 QTEqual(val, 1.1);
             }
         });
 
     TestRunner::GetRunner()->AddTest(
-        "Tensor",
-        "Can convolve TensorPtr's",
-        []() {
+        "Tensor", "Can convolve TensorPtr's", []() {
             ADContext.Reset();
 
             TensorPtr<float> features = std::make_shared<Tensor<float>>();
@@ -92,17 +78,17 @@ void TestTensor()
             result->SetName("output");
 
             /*
-            Check for dangling pointers. at this point, 
-            we have the ref's here as well as the Op ref 
-            tracked by the global auto diff context.            
+            Check for dangling pointers. at this point,
+            we have the ref's here as well as the Op ref
+            tracked by the global auto diff context.
             */
 
             QTEqual(features.use_count(), 2);
             QTEqual(filter.use_count(), 2);
-            QTEqual(result.use_count(), 3);
+            QTEqual(result.use_count(), 2);
 
             /*
-            Reset the auto diff should make it so that 
+            Reset the auto diff should make it so that
             we have the only ref left.
             */
             ADContext.Reset();
@@ -113,9 +99,7 @@ void TestTensor()
         });
 
     TestRunner::GetRunner()->AddTest(
-        "Tensor",
-        "Device to host copy helpers.",
-        []() {
+        "Tensor", "Device to host copy helpers.", []() {
             ADContext.Reset();
 
             TensorPtr<float> features = std::make_shared<Tensor<float>>();
@@ -128,22 +112,18 @@ void TestTensor()
 
             vector<float> buffer;
             features->CopyBufferToHost(buffer);
-            for (auto v : buffer)
-            {
+            for (auto v : buffer) {
                 QTEqual(v, 1.3);
             }
 
             features->CopyGradBufferToHost(buffer);
-            for (auto v : buffer)
-            {
+            for (auto v : buffer) {
                 QTEqual(v, 0.1);
             }
         });
 
     TestRunner::GetRunner()->AddTest(
-        "Tensor",
-        "Power operator overloading",
-        []() {
+        "Tensor", "Power operator overloading", []() {
             ADContext.Reset();
 
             TensorPtr<float> features = std::make_shared<Tensor<float>>();
@@ -158,59 +138,49 @@ void TestTensor()
 
             vector<float> buffer;
             out->CopyBufferToHost(buffer);
-            for (auto v : buffer)
-            {
+            for (auto v : buffer) {
                 QTEqual(v, 9.0);
             }
         });
 
-    TestRunner::GetRunner()->AddTest(
-        "Tensor",
-        "Cast",
-        []() {
-            ADContext.Reset();
+    TestRunner::GetRunner()->AddTest("Tensor", "Cast", []() {
+        ADContext.Reset();
 
-            TensorShape imgShape = {1, 10, 10, 3};
+        TensorShape imgShape = {1, 10, 10, 3};
 
-            TensorPtr<uint8_t> imgTensor =
-                ADContext.CreateTensor<uint8_t>(imgShape, "TestImg", 1, false);
+        TensorPtr<uint8_t> imgTensor =
+            CreateTensor<uint8_t>(imgShape, "TestImg", 1, false);
 
-            auto convertedTensor = imgTensor->Cast<float>();
+        auto convertedTensor = imgTensor->Cast<float>();
 
-            vector<float> buffer;
-            convertedTensor->CopyBufferToHost(buffer);
+        vector<float> buffer;
+        convertedTensor->CopyBufferToHost(buffer);
 
-            for (auto v : buffer)
-            {
-                QTEqual(v, 1.0f);
-            }
-        });
+        for (auto v : buffer) {
+            QTEqual(v, 1.0f);
+        }
+    });
 
     TestRunner::GetRunner()->AddTest(
-        "Tensor",
-        "Conv,operator+ overload combination",
-        []() {
+        "Tensor", "Conv,operator+ overload combination", []() {
             ADContext.Reset();
 
             TensorPtr<float> features =
-                ADContext.CreateTensor<float>({1, 64, 64, 3},
-                                              "features", 2.0, false);
+                CreateTensor<float>({1, 64, 64, 3}, "features", 2.0, false);
 
             TensorPtr<float> filter =
-                ADContext.CreateFilter<float>(3, 1, 3,
-                                              "filter", 1.0, true);
+                CreateFilter<float>(3, 1, 3, 3, "filter", 1.0, true);
 
             TensorPtr<float> bias =
-                ADContext.CreateTensor<float>({1, 62, 62, 1},
-                                              "bias", 3.0, true);
+                CreateTensor<float>({1, 62, 62, 1}, "bias", 3.0, true);
 
-            TensorPtr<float> result = features->Convolve(filter, {0, 0}, {1, 1}) + bias;
+            TensorPtr<float> result =
+                features->Convolve(filter, Stride1, Pad0) + bias;
 
             vector<float> buffer;
             result->CopyBufferToHost(buffer);
             QTEqual(buffer.size(), 62 * 62);
-            for (auto v : buffer)
-            {
+            for (auto v : buffer) {
                 QTEqual(v, 54.0f + 3.0);
             }
         });

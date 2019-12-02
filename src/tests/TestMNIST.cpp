@@ -5,7 +5,6 @@
 #include "../utils/Timer.hpp"
 #include "QuickTestCPP.h"
 #include "UnitTest.hpp"
-#include "tensor/AutoDiff.hpp"
 
 #include <cuda_runtime.h>
 
@@ -29,11 +28,10 @@ void TestMNIST() {
 
             ADContext.Reset();
 
-            TensorPtr<float> f1 = ADContext.CreateFilter<float>(
-                1, 4, 3, "conv1_filter", 0.01, false);
+            TensorPtr<float> f1 =
+                CreateFilter<float>(1, 4, 3, 3, "conv1_filter", 0.01, false);
 
             LOG.INFO() << "Filter size: " << f1->GetLinearSize();
-            cout << endl;
 
             /*size 3*3*1*4*/
             vector<float> f1_init = {/* first filter */
@@ -50,119 +48,101 @@ void TestMNIST() {
                                      0.0, 0.0, 1.0 / (2 * 255.0f), 0.0};
 
             /*size 3*3*1*4*/
-            vector<float> f2_init = {/* first filter row 1 */
-                                     0.0, 0.0, 0.0, 0.0, 
-                                     1.0 /(2.0), 1.0 / (2 ), 1.0 / (2 ), 1.0 / (2 ),
-                                     0.0, 0.0, 0.0, 0.0,
+            vector<float> f2_init = {
+                /* first filter row 1 */
+                0.0, 0.0, 0.0, 0.0, 1.0 / (2.0), 1.0 / (2), 1.0 / (2),
+                1.0 / (2), 0.0, 0.0, 0.0, 0.0,
 
-                                     /*row 2*/
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
+                /*row 2*/
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 
-                                     /* row 3 */
-                                     0.0, 0.0, 0.0, 0.0,
-                                     -1.0 / (2.0f), -1.0 / (2.0f), -1.0 / (2.0f), -1.0 / (2.0f),
-                                     0.0, 0.0, 0.0, 0.0,
+                /* row 3 */
+                0.0, 0.0, 0.0, 0.0, -1.0 / (2.0f), -1.0 / (2.0f), -1.0 / (2.0f),
+                -1.0 / (2.0f), 0.0, 0.0, 0.0, 0.0,
 
-                                     /* second filter */   
-                                     0.0, 0.0, 0.0, 0.0, 
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
-                                     /*row 2*/
-                                     -1.0 / (2 * 1.0), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f),
-                                     0.0, 0.0, 0.0, 0.0,                                                                          
-                                     1.0 / (2), 1.0 / (2 ), 1.0 / (2 ), 1.0 / (2),
-                                     /* row 3 */
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
+                /* second filter */
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                /*row 2*/
+                -1.0 / (2 * 1.0), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f),
+                -1.0 / (2 * 1.0f), 0.0, 0.0, 0.0, 0.0, 1.0 / (2), 1.0 / (2),
+                1.0 / (2), 1.0 / (2),
+                /* row 3 */
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 
-                                     /* third filter  row 1*/
-                                     0.0, 0.0, 0.0, 0.0, 
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
-                                     /*row 2*/
-                                     1.0 / (2), 1.0 / (2 ), 1.0 / (2 ), 1.0 / (2),
-                                     0.0, 0.0, 0.0, 0.0,                                     
-                                     -1.0 / (2 * 1.0), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f),
-                                     /* row 3 */
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
+                /* third filter  row 1*/
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+                /*row 2*/
+                1.0 / (2), 1.0 / (2), 1.0 / (2), 1.0 / (2), 0.0, 0.0, 0.0, 0.0,
+                -1.0 / (2 * 1.0), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f),
+                -1.0 / (2 * 1.0f),
+                /* row 3 */
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 
-                                     /* fourth filter */
-                                     0.0, 0.0, 0.0, 0.0, 
-                                     1.0 / (2 * 1.0f), 1.0 / (2 * 1.0f), 1.0 / (2 * 1.0f), 1.0 / (2 * 1.0f),
-                                     0.0, 0.0, 0.0, 0.0,
+                /* fourth filter */
+                0.0, 0.0, 0.0, 0.0, 1.0 / (2 * 1.0f), 1.0 / (2 * 1.0f),
+                1.0 / (2 * 1.0f), 1.0 / (2 * 1.0f), 0.0, 0.0, 0.0, 0.0,
 
-                                     /*row 2*/
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
-                                     0.0, 0.0, 0.0, 0.0,
+                /*row 2*/
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 
-                                     /* row 3 */
-                                     0.0, 0.0, 0.0, 0.0,
-                                     -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f),
-                                     0.0, 0.0,0.0,0.0};
-
-
+                /* row 3 */
+                0.0, 0.0, 0.0, 0.0, -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f),
+                -1.0 / (2 * 1.0f), -1.0 / (2 * 1.0f), 0.0, 0.0, 0.0, 0.0};
 
             LOG.INFO() << "Filter size: " << f1_init.size();
             cout << endl;
 
             f1->CopyBufferToDevice(f1_init);
 
-            TensorPtr<float> f2 = ADContext.CreateFilter<float>(
-                4, 4, 3, "conv2_filter", 0.01, true);
-
-          
+            TensorPtr<float> f2 =
+                CreateFilter<float>(4, 4, 3, 3, "conv2_filter", 0.01, true);
 
             f2->CopyBufferToDevice(f2_init);
 
-            TensorPtr<float> f3 = ADContext.CreateFilter<float>(
-                4, 4, 3, "conv3_filter", 0.11, true);
+            TensorPtr<float> f3 =
+                CreateFilter<float>(4, 4, 3, 3, "conv3_filter", 0.11, true);
 
             f3->CopyBufferToDevice(f2_init);
 
-            TensorPtr<float> f4 = ADContext.CreateFilter<float>(
-                4, 4, 3, "conv4_filter", 0.1, true);
+            TensorPtr<float> f4 =
+                CreateFilter<float>(4, 4, 3, 3, "conv4_filter", 0.1, true);
 
             f4->CopyBufferToDevice(f2_init);
 
-            TensorPtr<float> f5 = ADContext.CreateFilter<float>(
-                4, 4, 3, "conv5_filter", 0.1, true);            
+            TensorPtr<float> f5 =
+                CreateFilter<float>(4, 4, 3, 3, "conv5_filter", 0.1, true);
             f5->CopyBufferToDevice(f2_init);
 
             // Final filter for outputting to 10 classes
-            TensorPtr<float> out_filter = ADContext.CreateFilter<float>(
-                4, 10, 2, "out_filter", 0.11, true);
+            TensorPtr<float> out_filter =
+                CreateFilter<float>(4, 10, 2, 2, "out_filter", 0.11, true);
 
             std::vector<float> out_init = {
-                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
-                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,                 
-                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 
-                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
+                0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,
+                0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
 
-                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
-                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,                 
-                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 
-                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
+                0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,
+                0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
 
-                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
-                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,                 
-                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 
-                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
+                0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,
+                0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
 
-                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
-                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5,                 
-                0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 
-                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, 
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
+                0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,
+                0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,  0.5,
+                -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5, -0.5,
             };
 
             out_filter->CopyBufferToDevice(out_init);
 
-            LOG.INFO() << "Filter size: " << out_filter->GetLinearSize() << " " << out_init.size();
+            LOG.INFO() << "Filter size: " << out_filter->GetLinearSize() << " "
+                       << out_init.size();
             cout << endl;
 
             // Create a vector of trainable parametrs.
@@ -188,26 +168,26 @@ void TestMNIST() {
 
                 // First conv - 28x28 output
                 TensorPtr<float> features =
-                    imageBatch->Convolve(f1, {1, 1}, {1, 1});
+                    imageBatch->Convolve(f1, Stride1, Pad1);
                 features = features->ReLU();
 
                 // Second convolution - size 14x14
-                auto features2 = features->Convolve(f2, {1, 1}, {2, 2});
+                auto features2 = features->Convolve(f2, Stride2, Pad1);
                 features2 = features2->ReLU();
 
                 // Third convolution - size 7x7
-                auto features3 = features2->Convolve(f3, {1, 1}, {2, 2});
+                auto features3 = features2->Convolve(f3, Stride2, Pad1);
                 features3 = features3->ReLU();
 
                 // Fourth convolution - size 4x4
-                auto features4 = features3->Convolve(f4, {1, 1}, {2, 2});
+                auto features4 = features3->Convolve(f4, Stride2, Pad1);
                 features4 = features4->ReLU();
 
                 // Fifth convolution - size 2x2
-                auto features5 = features4->Convolve(f5, {0, 0}, {1, 1});
+                auto features5 = features4->Convolve(f5, Stride1, Pad0);
                 features5 = features5->ReLU();
 
-                auto out = features5->Convolve(out_filter, {0, 0}, {1, 1});
+                auto out = features5->Convolve(out_filter, Stride1, Pad0);
 
                 auto loss = out->SigmoidCELoss(cat_ids);
 
@@ -222,15 +202,14 @@ void TestMNIST() {
 
                 ADContext.CalcGradient(loss);
 
-                LOG.INFO() << "Parameters: ";
+                LOG.DEBUG() << "Parameters: ";
                 for (auto &t : params) {
-                    LOG.INFO() << t->GetName() << "\n   "
-                               << t->PrintTensor(false, true);
+                    LOG.DEBUG() << t->GetName();
                 }
 
-                LOG.INFO() << "F2 grad: " << f2->PrintTensor(true, true);
+                // LOG.DEBUG() << "F2 grad: " << f2->PrintTensor(true, true);
 
-                LOG.INFO() << "Logits: " << out->PrintTensor(false, false);
+                LOG.DEBUG() << "Logits: " << out->PrintTensor(false, false);
                 LOG.INFO() << "Loss: " << loss->PrintTensor(false, false);
                 LOG.INFO() << "Labels: " << cat_ids->PrintTensor(false, false);
 
@@ -244,6 +223,8 @@ void TestMNIST() {
 
                 // LOG.INFO() << "First filter, post optimizer step: ";
                 // LOG.INFO() << f1->PrintTensor();
+
+                // LOG.INFO() << imageBatch->GetDevicePointer();
 
                 LOG.INFO() << ADContext.Print();
 
