@@ -2,45 +2,29 @@
 
 #include <string>
 
+#include "../tensor/TensorBase.hpp"
 #include "types.hpp"
-#include "../tensor/Tensor.hpp"
 
-namespace DLFS
-{
+namespace DLFS {
 
-
-class BaseOperation
-{
-public:
+class BaseOperation : public std::enable_shared_from_this<BaseOperation> {
+  public:
     BaseOperation() {}
 
-    virtual void ExecuteForward() = 0;
+    // virtual void ExecuteForward() = 0;
     virtual TensorBasePtr GetOutputTensor() = 0;
     virtual void ExecuteBackward() = 0;
 
-    inline std::string GetName()
-    {
-        return m_name;
-    }
+    std::string GetName() { return m_name; }
 
-    inline void SetName(const std::string &name)
-    {
-        m_name = name;
-    }
+    void SetName(const std::string &name) { m_name = name; }
 
-    inline void SetId(uint32_t id)
-    {
-        m_id = id;
-    }
+    std::shared_ptr<BaseOperation> GetShared() { return this->shared_from_this(); }
 
-    inline uint32_t GetId()
-    {
-        return m_id;
-    }
-
-private:
+  private:
     std::string m_name;
-    uint32_t m_id;
 };
+
+using BaseOpPtr = std::shared_ptr<BaseOperation>;
 
 } // namespace DLFS
