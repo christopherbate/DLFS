@@ -10,3 +10,4 @@ void TestMNIST();
 void TestImage();
 void TestSoftmax();
 void TestActivation();
+void TestNetwork();
