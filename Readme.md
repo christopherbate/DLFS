@@ -17,10 +17,10 @@ Done:
 1. Basic add/sub/mul/power operations
 2. Autodiff (single threaded)
 3. Data loading / batching using NvJPEG (single thread)
+4. Fully working MNIST "hello world" unit tested for correct autograd calculations
 
 In Progress:
 
-1. Fully working MNIST "hello world"
 2. Multithreaded batch loader
 3. ResNet example
 4. RetinaNet example
