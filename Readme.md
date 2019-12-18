@@ -22,6 +22,7 @@ Done:
 In Progress:
 
 2. Multithreaded batch loader
+3. SQLite annotation data loader
 3. ResNet example
 4. RetinaNet example
 5. Serialization
