@@ -188,20 +188,30 @@ void TestAutoDiff() {
 
             QTEqual(ADContext.GetOpTraceSize(), 2);
 
-            std::vector<std::shared_ptr<TensorBase>> parameters;
+            std::vector<TensorBasePtr> parameters;
             parameters.emplace_back(filter);
 
-            ADContext.CalcGradient(result, parameters);
+            ADContext.CalcGradient(result2);
 
             buffer.clear();
+            // Check that the result output buffer has not changed
             result->CopyBufferToHost(buffer);
             QTEqual(buffer.size(), 1);
             QTEqual(buffer[0], 9.0f);
 
             buffer.clear();
+            // Check the gradient buffer is correct for the conv result.
+            // It shouldbe 
             result->CopyGradBufferToHost(buffer);
             QTEqual(buffer.size(), 1);
             QTEqual(buffer[0], 1.0f);
+
+            // Check the gradient buffer is correct for the filter
+            filter->CopyGradBufferToHost(buffer);
+            QTEqual(buffer.size(), 9);
+            for(auto num: buffer){
+                QTEqual(num, 1.0f);
+            }
         });
 
     TestRunner::GetRunner()->AddTest(

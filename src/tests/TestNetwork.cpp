@@ -2,6 +2,7 @@
 #include "UnitTest.hpp"
 
 #include "tensor/Tensor.hpp"
+#include "operations/SigmoidCrossEntropy.hpp"
 
 using namespace DLFS;
 using namespace std;
@@ -39,9 +40,9 @@ void TestNetwork() {
                 auto y1 = x0->Convolve(W0, {1, 1}, {0, 0});
                 auto f1 = y1 + B0;
                 auto F1 = f1->ReLU();
-                auto f2 = F1->Convolve(W1, {1, 1}, {0, 0}) + B1;
-                auto sm = f2->Softmax();
-                auto loss = f2->SigmoidCELoss(labels);
+                auto f2 = F1->Convolve(W1, {1, 1}, {0, 0}) + B1;                
+                auto loss = SigmoidCELoss(f2, labels, true);
+
                 if (iter % printInterval == 0) {
                     LOG.INFO() << loss->PrintTensor(false, false);
                 }

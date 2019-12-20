@@ -5,6 +5,7 @@
 #include "../utils/Timer.hpp"
 #include "QuickTestCPP.h"
 #include "UnitTest.hpp"
+#include "operations/SigmoidCrossEntropy.hpp"
 
 #include <cuda_runtime.h>
 
@@ -148,7 +149,7 @@ void TestMNIST() {
             // Create a vector of trainable parametrs.
             std::vector<TensorBasePtr> params = {f2, f3, f4, f5, out_filter};
 
-            for (auto i = 0; i < 100; i++) {
+            for (auto i = 0; i < 10; i++) {
                 batchTimer.tick();
 
                 dataLoader.RunOnce();
@@ -157,12 +158,8 @@ void TestMNIST() {
 
                 ObjDetExampleBatch ex_batch = dataLoader.DequeBatch();
 
-                // As a test, try to save this image.
                 auto image = std::get<0>(ex_batch);
                 auto cat_ids = std::get<2>(ex_batch);
-
-                // WriteImageTensorPNG(
-                // "./data/mnist_load_test" + to_string(i) + ".png", image);
 
                 TensorPtr<float> imageBatch = image->Cast<float>();
 
@@ -187,19 +184,14 @@ void TestMNIST() {
                 auto features5 = features4->Convolve(f5, Stride1, Pad0);
                 features5 = features5->ReLU();
 
-                auto out = features5->Convolve(out_filter, Stride1, Pad0);
+                // Final convolution - size Batchx1x1x10
+                auto logits = features5->Convolve(out_filter, Stride1, Pad0);
 
-                auto loss = out->SigmoidCELoss(cat_ids);
+                // auto loss = out->SigmoidCELoss(cat_ids);
+                auto loss = SigmoidCELoss(logits, cat_ids, true);
 
                 std::vector<TensorBasePtr> featuresList = {
                     features, features2, features3, features4, features5};
-
-                // LOG.INFO() << "Features: ";
-                // for (auto &t : featuresList) {
-                //     LOG.INFO() << t->GetName() << "\n   "
-                //                << t->PrintTensor(false, true);
-                // }
-
                 ADContext.CalcGradient(loss);
 
                 LOG.DEBUG() << "Parameters: ";
@@ -207,29 +199,15 @@ void TestMNIST() {
                     LOG.DEBUG() << t->GetName();
                 }
 
-                // LOG.DEBUG() << "F2 grad: " << f2->PrintTensor(true, true);
-
-                LOG.DEBUG() << "Logits: " << out->PrintTensor(false, false);
+                LOG.DEBUG() << "Logits: " << logits->PrintTensor(false, false);
                 LOG.INFO() << "Loss: " << loss->PrintTensor(false, false);
                 LOG.INFO() << "Labels: " << cat_ids->PrintTensor(false, false);
 
-                // LOG.INFO() << "First filter gradient: ";
-                // LOG.INFO() << f1->PrintTensor(true);
-
-                // LOG.INFO() << "First filter: ";
-                // LOG.INFO() << f1->PrintTensor();
-
                 ADContext.StepOptimizer(params);
 
-                // LOG.INFO() << "First filter, post optimizer step: ";
-                // LOG.INFO() << f1->PrintTensor();
-
-                // LOG.INFO() << imageBatch->GetDevicePointer();
-
                 LOG.INFO() << ADContext.Print();
-
-                LOG.INFO() << "Batch elapsed: " << batchTimer.tick_us()
-                           << " usec";
+                LOG.INFO() << "Batch elapsed: " << std::fixed
+                           << batchTimer.tick_us() << " usec";
             }
         });
 }

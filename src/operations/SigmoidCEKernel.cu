@@ -7,20 +7,6 @@
 using namespace DLFS;
 using namespace std;
 
-struct TensorInfoCUDA {
-    int n;
-    int h;
-    int w;
-    int c;
-
-    TensorInfoCUDA(const TensorShape& shape){
-        n = shape[0];
-        h = shape[1];
-        w = shape[2];
-        c = shape[3];
-    }
-};
-
 /**
  * Declarations
  */
@@ -30,9 +16,8 @@ SigmoidCrossEntropyFloat(TensorInfoCUDA logitShape, float *logits,
                          TensorInfoCUDA outputShape, float *output, bool reduce_mean);
 
 __global__ void
-SigmoidCrossEntropyBackwardFloat(TensorInfoCUDA logitShape, float *logits,
-                                 TensorInfoCUDA labelShape, uint32_t *labels,
-                                 TensorInfoCUDA outputShape, float *output, bool reduce_mean);
+SigmoidCrossEntropyBackwardFloat(TensorInfoCUDA logitShape, float *logits, float *dLogits,
+                                TensorInfoCUDA labelShape, uint32_t *labels);                    
 
 /**
  * Kernels
@@ -52,7 +37,7 @@ LaunchSigmoidCEKernel(CustomOpDataType dataType,
     case CustomOpDataType::Float:
         LOG.DEBUG() << "Launching sigmoid cross entropy (float) kernel with "
                    << threads << " threads";
-        SigmoidCrossEntropyFloat<<<1, threads>>>(ti[0], (float *)logits, ti[1],
+        SigmoidCrossEntropyFloat<<<1, threads, logitShape[0]*logitShape[3]>>>(ti[0], (float *)logits, ti[1],
                                                  (uint32_t *)labels, ti[2],
                                                  (float *)output, reduce_mean);
         break;
@@ -62,14 +47,13 @@ LaunchSigmoidCEKernel(CustomOpDataType dataType,
 }
 
 extern "C" void
-LaunchSigmoidCEBackwardKernel(CustomOpDataType dataType, TensorShape logitShape,
-                              void *logits, TensorShape labelShape,
-                              void *labels, TensorShape outputShape,
-                              void *output, bool reduce_mean) {
+LaunchSigmoidCEBackwardKernel(CustomOpDataType dataType, TensorShape logitShape, 
+                              void *logits, void *dLogits, TensorShape labelShape,
+                              void *labels) {
     int threads = logitShape[0];
 
-    TensorInfoCUDA ti[3] = {TensorInfoCUDA(logitShape),
-        TensorInfoCUDA(labelShape), TensorInfoCUDA(outputShape)};       
+    TensorInfoCUDA ti[2] = {TensorInfoCUDA(logitShape),
+        TensorInfoCUDA(labelShape)};
 
     switch (dataType) {
     case CustomOpDataType::Float:
@@ -77,8 +61,7 @@ LaunchSigmoidCEBackwardKernel(CustomOpDataType dataType, TensorShape logitShape,
             << "Launching sigmoid cross entropy backward (float) kernel with "
             << threads << " threads";
         SigmoidCrossEntropyBackwardFloat<<<1, threads>>>(
-            ti[0], (float *)logits, ti[1], (uint32_t *)labels, ti[2],
-            (float *)output, reduce_mean);
+            ti[0], (float *)logits, (float*)dLogits, ti[1], (uint32_t *)labels);
         break;
     default:
         throw std::runtime_error("Not implemented.");
@@ -97,30 +80,36 @@ SigmoidCrossEntropyFloat(TensorInfoCUDA logitShape, float *logits,
                          TensorInfoCUDA labelShape, uint32_t *labels,
                          TensorInfoCUDA outputShape, float *output, bool reduce_mean) {
     unsigned int batchIdx = threadIdx.x;
+    extern __shared__ float sdata[];
 
     // Check to make sure we are not out of bounds.
-    if (batchIdx < logitShape.n) {
-        uint32_t label = labels[batchIdx];
-        float normalization = logitShape.n*logitShape.c;
-        for (unsigned int classIdx = 0; classIdx < logitShape.c; classIdx++) {
-            // This is taken from tensor flow docs.
-            // Calculates sigmoid CE with good numerical stability for
-            // negative x
-            unsigned int index = batchIdx * logitShape.c + classIdx;
-            float x = logits[index];
+    if (batchIdx > logitShape.n-1) 
+        return;
 
-            float z = label == classIdx ? x : 0.0f;
-            float ce = max(x, 0.0) - z + logf(1.0f + expf(-abs(x)));
-            // float ce = z;
+    uint32_t label = labels[batchIdx];
+    float loss = 0.0;
+    for (unsigned int classIdx = 0; classIdx < logitShape.c; classIdx++) {            
+        unsigned int index = batchIdx * logitShape.c + classIdx;
+        float x = logits[index];            
+        loss += max(x, 0.0) + logf(1.0f + expf(-abs(x)));                            
+    }
+    sdata[batchIdx] = loss - logits[batchIdx*logitShape.c + label];        
 
-            // No reduction case:
-            // Index is channelSize*batchIdx + classIdx.
-            if (reduce_mean){                
-                atomicAdd_block(output, ce/normalization);
-            } else {
-                output[index] = ce;
-            }
+    if(!reduce_mean){
+        output[batchIdx] = sdata[batchIdx];
+        return;
+    }
+
+    __syncthreads();
+    for(unsigned int stride = 1; stride < logitShape.n; stride*=2){
+        if((threadIdx.x %(stride*2))==0){
+            sdata[threadIdx.x] += sdata[threadIdx.x+stride];
         }
+        __syncthreads(); // Sync must happen at every level of the pyramid;
+    }
+
+    if (threadIdx.x == 0){
+        output[0] = sdata[0] / static_cast<float>(logitShape.n);
     }
 }
 
@@ -132,35 +121,27 @@ SigmoidCrossEntropyFloat(TensorInfoCUDA logitShape, float *logits,
  * Parallelized over the batch dimension.
  */
 __global__ void
-SigmoidCrossEntropyBackwardFloat(TensorInfoCUDA logitShape, float *logits,
-                                 TensorInfoCUDA labelShape, uint32_t *labels,
-                                 TensorInfoCUDA outputShape, float *output, bool reduce_mean) {
+SigmoidCrossEntropyBackwardFloat(TensorInfoCUDA logitShape, float *logits, float *dLogits,
+                                 TensorInfoCUDA labelShape, uint32_t *labels)
+{                                 
     unsigned int batchIdx = threadIdx.x;
 
     // Check to make sure we are not out of bounds.
-    if (batchIdx < logitShape.n) {
-        uint32_t label = labels[batchIdx];
-        float normalization = logitShape.n*logitShape.c;
-        for (unsigned int classIdx = 0; classIdx < logitShape.c; classIdx++) {
-            // This is taken from tensor flow docs.
-            // Calculates sigmoid CE with good numerical stability for
-            // negative x
-            
-            unsigned int index = batchIdx * logitShape.c + classIdx;
-            float x = logits[index];
+    if (batchIdx > logitShape.n-1)
+        return;
+        
+    uint32_t label = labels[batchIdx];
+    float normalization = logitShape.n*logitShape.c;
+    for (unsigned int classIdx = 0; classIdx < logitShape.c; classIdx++) {
 
-            float z = label == classIdx ? 1.0f : 0.0f;
-            float expAbs = expf(-x);
-            float logTerm = expAbs / (1 + expAbs);
-            float dCEdX = z - logTerm;
+        
+        unsigned int index = batchIdx * logitShape.c + classIdx;
+        float x = logits[index];
 
-            // No reduction case:
-            // Index is channelSize*batchIdx + classIdx.
-            if (!reduce_mean){
-                output[index] = dCEdX;
-            }else{
-                output[index] = dCEdX / normalization;
-            }            
-        }
-    }
+        float z = label == classIdx ? 1.0f : 0.0f;
+        float expAbs = expf(-x);
+        float logTerm = expAbs / (1 + expAbs);
+        float dCEdX = z - logTerm;               
+        dLogits[index] = dCEdX;
+    }    
 }

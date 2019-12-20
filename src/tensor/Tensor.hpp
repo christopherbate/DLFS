@@ -187,7 +187,6 @@ class Tensor : public TensorBase,
      * Functions for loss calculations.
      */
     TensorPtr<T> Softmax();
-    TensorPtr<T> SigmoidCELoss(TensorPtr<uint32_t> labels);
     TensorPtr<T> ReLU();
 
     /**
@@ -293,12 +292,12 @@ class AutoDiffContext {
 
     void CalcGradient(TensorBasePtr scalarTensor) {
         LOG.DEBUG() << "Calc gradient of f'n with output name : "
-                   << scalarTensor->GetName();
+                    << scalarTensor->GetName();
         // Initialize the backward operation. This operation sets up the
         // gradient tensor at the top of the chain.
         scalarTensor->InitGradChain();
 
-        // Cycle through the operations in reverse order.        
+        // Cycle through the operations in reverse order.
         for (auto opIter = m_opTrace.rbegin(); opIter != m_opTrace.rend();
              opIter++) {
             auto op = *opIter;
@@ -350,5 +349,19 @@ class AutoDiffContext {
 };
 
 extern AutoDiffContext ADContext;
+
+struct TensorInfoCUDA {
+    int n;
+    int h;
+    int w;
+    int c;
+
+    TensorInfoCUDA(const TensorShape &shape) {
+        n = shape[0];
+        h = shape[1];
+        w = shape[2];
+        c = shape[3];
+    }
+};
 
 } // namespace DLFS

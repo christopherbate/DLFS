@@ -87,7 +87,6 @@ const std::string &Tensor<T>::PrintTensor(bool grad, bool breakChannels) {
     return m_tensorMsg;
 }
 
-
 template <typename T> TensorPtr<T> Tensor<T>::Add(TensorPtr<T> rhs, T rhsMul) {
     shared_ptr<TensorOp<T>> addOp = make_shared<TensorOp<T>>(PW_ADD);
 
@@ -168,31 +167,6 @@ template <typename T> TensorPtr<T> Tensor<T>::ReLU() {
 
     outputTensor->SetShape(GetShape());
     outputTensor->SetName("ReluOutput");
-    outputTensor->AllocateIfNecessary();
-
-    op->SetOutput(outputTensor);
-
-    op->ExecuteForward();
-
-    ADContext.AddOp(op);
-
-    return outputTensor;
-}
-
-template <typename T>
-TensorPtr<T> Tensor<T>::SigmoidCELoss(TensorPtr<uint32_t> labels) {
-    SigmoidCEOpPtr<T> op = std::make_shared<SigmoidCrossEntropyOp<T>>();
-
-    op->SetName("SigmoidCEOp");
-    op->SetLogits(this->shared_from_this());
-    op->SetLabels(labels);
-
-    TensorPtr<T> outputTensor = CreateTensor<T>();
-    if (GetGradFlag())
-        outputTensor->SetGradFlag(true);
-
-    outputTensor->SetShape(GetShape());
-    outputTensor->SetName("SigmoidCELossValue");
     outputTensor->AllocateIfNecessary();
 
     op->SetOutput(outputTensor);
