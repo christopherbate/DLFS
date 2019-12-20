@@ -1,6 +1,7 @@
 #include "QuickTestCPP.h"
 #include "UnitTest.hpp"
 #include "operations/Softmax.hpp"
+#include "operations/SigmoidCrossEntropy.hpp"
 
 #include "tensor/Tensor.hpp"
 #include "tensor/TensorList.hpp"
@@ -28,86 +29,114 @@ void TestSoftmax() {
     });
 
     TestRunner::GetRunner()->AddTest(
-        "Sigmoid Cross Entropy Op", "Sigmoid Cross Entropy Forward/Backward",
+        "Softmax Cross Entropy Op", "Softmax Cross Entropy Forward/Backward",
         []() {
-            TensorShape shape = {10, 1, 1, 5};
-            TensorShape labelShape = {10, 1, 1, 1};
+            TensorShape shape = {8, 1, 1, 5};
+            TensorShape labelShape = {8, 1, 1, 1};
 
             // Test with both positive and negative logits
-            TensorPtr<float> inputA =
+            TensorPtr<float> logits =
                 CreateTensor<float>(shape, "tensorA", 1.0);
-            TensorPtr<float> inputB =
-                CreateTensor<float>(shape, "tensorA", -1.0);
 
-            std::vector<uint32_t> labelBuffer = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4};
+            std::vector<uint32_t> labelBuffer = {0, 1, 2, 3, 4, 0, 1, 2};
 
-            TensorPtr<uint32_t> labels = CreateTensor<uint32_t>(
-                labelShape, "labels", 0.0, false);
+            TensorPtr<uint32_t> labels =
+                CreateTensor<uint32_t>(labelShape, "labels", 0, false);
             labels->CopyBufferToDevice(labelBuffer);
 
-            auto outputPosLogits = inputA->SigmoidCELoss(labels);
-            auto outputNegLogits = inputB->SigmoidCELoss(labels);
+            auto ce_loss_unreduced = SoftmaxCELoss(logits, labels, false);
 
-            std::vector<float> bufferPos;
-            std::vector<float> bufferNeg;
+            std::vector<float> buffer;
 
-            outputNegLogits->CopyBufferToHost(bufferNeg);
-            outputPosLogits->CopyBufferToHost(bufferPos);
+            ce_loss_unreduced->CopyBufferToHost(buffer);
 
-            QTEqual(bufferNeg.size(), 50);
-            QTEqual(bufferPos.size(), 50);
+            QTEqual(buffer.size(), 8);
 
-            float negLoss = 1.3132f;
-            float posLoss = 0.3132f;
+            for (auto num : buffer) {
+                QTAlmostEqual(num, 1.6094, 1e-4);
+            }
 
-            for (int i = 0; i < 10; i++) {
-                for (int j = 0; j < 5; j++) {
-                    if (i % 5 == j) {
-                        QTAlmostEqual(bufferPos[i * 5 + j], posLoss, 1e-3);
-                        QTAlmostEqual(bufferNeg[i * 5 + j], negLoss, 1e-3);
-                    } else {
-                        QTAlmostEqual(bufferPos[i * 5 + j], negLoss, 1e-3);
-                        QTAlmostEqual(bufferNeg[i * 5 + j], posLoss, 1e-3);
-                    }
-                }
+            auto ce_loss_reduced = SoftmaxCELoss(logits, labels, true);
+
+            ce_loss_reduced->CopyBufferToHost(buffer);
+
+            QTEqual(buffer.size(), 1);
+
+            for (auto num : buffer) {
+                QTAlmostEqual(num, 1.6094, 1e-4);
             }
         });
 
     TestRunner::GetRunner()->AddTest(
-        "Sigmoid Cross Entropy Op", "Sigmoid Cross Entropy Backward", []() {
+        "Sigmoid Cross Entropy Op", "Sigmoid Cross Entropy Forward/ Backward (Uneduced)",
+        []() {
             ADContext.Reset();
 
-            TensorShape shape = {10, 1, 1, 5};
-            TensorShape labelShape = {10, 1, 1, 1};
+            TensorShape shape = {4, 1, 1, 5};
+            TensorShape labelShape = {4, 1, 1, 1};
 
-            // Test with both positive and negative logits
-            TensorPtr<float> inputA =
-                CreateTensor<float>(shape, "tensorA", 1.0);
+            TensorPtr<float> logits = CreateTensor<float>(shape, "logits", 1.0, true);
 
-            std::vector<uint32_t> labelBuffer = {0, 1, 2, 3, 4, 0, 1, 2, 3, 4};
+            std::vector<uint32_t> labelBuffer = {0, 1, 2, 3};
 
-            TensorPtr<uint32_t> labels = CreateTensor<uint32_t>(
-                labelShape, "labels", 0.0, false);
+            TensorPtr<uint32_t> labels =
+                CreateTensor<uint32_t>(labelShape, "labels", 0.0, false);
             labels->CopyBufferToDevice(labelBuffer);
 
-            auto loss = inputA->SigmoidCELoss(labels);
+            auto loss = SigmoidCELoss(logits, labels, false);
+
+            vector<float> buffer;
+            loss->CopyBufferToHost(buffer);
+            QTEqual(buffer.size(), 4);
+
+            for (auto num : buffer) {
+                QTAlmostEqual(num, 5.5663, 1e-4);
+            }
 
             ADContext.CalcGradient(loss);
 
-            vector<float> posGradBuffer;
-            inputA->CopyGradBufferToHost(posGradBuffer);
+            logits->CopyGradBufferToHost(buffer);            
 
-            float posGrad = -0.2689;
-            float negGrad = 0.7311;
-            cout << posGrad << negGrad << endl;
-            for (int i = 0; i < 10; i++) {
-                for (int j = 0; j < 5; j++) {
-                    if (i % 5 == j) {
-                        QTAlmostEqual(posGradBuffer[i * 5 + j], posGrad, 1e-3);
-                    } else {
-                        QTAlmostEqual(posGradBuffer[i * 5 + j], negGrad, 1e-3);
-                    }
-                }
+            QTEqual(buffer.size(), 20);
+
+            for (auto num : buffer) {
+                cout << num << endl;
+            }
+        });
+
+     TestRunner::GetRunner()->AddTest(
+        "Sigmoid Cross Entropy Op", "Sigmoid Cross Entropy Forward/ Backward (Reduced)",
+        []() {
+            ADContext.Reset();
+
+            TensorShape shape = {4, 1, 1, 5};
+            TensorShape labelShape = {4, 1, 1, 1};
+
+            TensorPtr<float> logits = CreateTensor<float>(shape, "logits", 1.0, true);
+
+            std::vector<uint32_t> labelBuffer = {0, 1, 2, 3};
+
+            TensorPtr<uint32_t> labels =
+                CreateTensor<uint32_t>(labelShape, "labels", 0.0, false);
+            labels->CopyBufferToDevice(labelBuffer);
+
+            auto loss = SigmoidCELoss(logits, labels, true);
+
+            vector<float> buffer;
+            loss->CopyBufferToHost(buffer);
+            QTEqual(buffer.size(), 1);
+
+            for (auto num : buffer) {
+                QTAlmostEqual(num, 5.5663, 1e-4);
+            }
+
+            ADContext.CalcGradient(loss);
+            
+            logits->CopyGradBufferToHost(buffer);            
+            QTEqual(buffer.size(), 20);
+
+            for (auto num : buffer) {
+                cout << num << endl;
             }
         });
 }

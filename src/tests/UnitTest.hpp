@@ -11,3 +11,4 @@ void TestImage();
 void TestSoftmax();
 void TestActivation();
 void TestNetwork();
+void TestBatchNorm();

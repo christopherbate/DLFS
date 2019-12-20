@@ -59,6 +59,7 @@ int main()
     TestActivation();
     TestImage();
     TestNetwork();
+    TestBatchNorm();
 
     TestRunner::GetRunner()->Run();
     TestRunner::GetRunner()->PrintSummary();
