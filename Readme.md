@@ -35,6 +35,7 @@ you isolate your development environment from the various other software that ar
 to manipulate CUDA libraries and runtimes (e.g. conda).
 
 Requires :
+- For build we use Bazel 2.0.0 [Install Link](https://docs.bazel.build/versions/master/install-ubuntu.html)
 - Nvidia driver (we're on 418)
 - CUDA >= 10.1 (we're developing on `cuda_10.1.243` installed with the `run` file on 19.04)
 - CuDNN 7.6.3 
@@ -43,18 +44,6 @@ Requires :
 - cmake
 - COCO 2017 images and labels (see below)
 - Lodepng (put in src/external/lodepng/lodepng.h)
-
-## flatbufferc
-When setting up a new environment, you must clone and build Google's flatbuffer compiler.
-
-```
-git clone git@github.com:google/flatbuffers.git
-cd flatbuffers
-mkdir build && cd build
-cmake -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Release ..
-make -j[num cores]
-sudo make install (or add the created bin to your path)
-```
 
 ## COCO 
 
@@ -72,6 +61,13 @@ unzip annotations_trainval2017.zip
 
 Build is provided by `make`. Binaries go into `bin`.
 
+View build dependencies:
+
+```
+sudo apt update && sudo apt install graphviz xdot
+./dep_graph.sh
+```
+
 # Test
 
 Run:
@@ -79,10 +75,6 @@ Run:
 ```./bin/test```
 
 The testing entrypoint is `src/UnitTest.cpp`. 
-
-# Quickstart 
-
-For fast usage, please look in the `examples` folder. There are examples for implementing basic object detection pipelines.
 
 
 # Overview 

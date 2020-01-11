@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package data;
+
+import "google/protobuf/timestamp.proto";
+
+message Dataset {
+    string id = 1;
+    string name = 2;
+    int32 num_annotations = 3;
+    int32 num_images = 4;
+    string bucket = 5;
+    google.protobuf.Timestamp updated_at = 6;
+}
+
+message Image {
+    string id = 1;
+    string presigned_url = 2;
+    string filename = 3;
+    int32 num_annotations = 4;
+    google.protobuf.Timestamp url_expiration = 5;
+    string dataset_id = 6;
+    repeated Tag tags = 7;
+    repeated Annotation annotations = 8;
+}
+
+message Annotation {
+    string id = 1;
+    Bounds box = 2;
+    string image_id = 3;
+    repeated Tag tags = 4;
+    bool pending = 5;
+}
+
+message Bounds { repeated float coords = 1; }
+
+message Tag {
+    string id = 1;
+    string label = 2;
+    uint64 num_images = 3;
+    uint64 num_annotations = 4;
+    string description = 5;
+    RGBColor color = 6;
+}
+
+message RGBColor {
+    double r = 1;
+    double g = 2;
+    double b = 3;
+}

@@ -1,0 +1,21 @@
+syntax = "proto3";
+package server;
+option go_package = "proto";
+
+service DLFSService {
+    rpc StartTraining(TrainingRequest) returns (TrainingStatus) {}
+
+    rpc RegisterRunner(RunnerInfo) returns (RegisterResponse) {}
+    rpc Heartbeat(RunnerInfo) returns (RegisterResponse) {}
+};
+
+message RunnerInfo {
+    string name = 1;
+    string gpu = 2;
+}
+
+message RegisterResponse { string response = 1; }
+
+message TrainingRequest { string dataset = 1; }
+
+message TrainingStatus { string status = 1; }
