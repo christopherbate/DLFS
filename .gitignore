@@ -5,3 +5,6 @@ bin
 datasets
 *.go
 *.py
+bazel-*
+*.db
+*test.jpg
