@@ -60,7 +60,7 @@ unzip annotations_trainval2017.zip
 
 # Build
 
-Build is provided by `make`. Binaries go into `bin`.
+Build is provided by Bazel. Binaries go into `bin`.
 
 View build dependencies:
 
@@ -69,14 +69,26 @@ sudo apt update && sudo apt install graphviz xdot
 ./dep_graph.sh
 ```
 
+To build the library:
+
+```
+bazel build //lib:all
+```
+
+To compile the runner client:
+
+```
+bazel build //client:main
+```
+
 # Test
 
-Run:
+For the data loading tests, you need the coco annotations in our serialized format (download link).
+The other tests only require some sample images which are included. 
 
-```./bin/test```
-
-The testing entrypoint is `src/UnitTest.cpp`. 
-
+```
+bazel test //tests:all
+```
 
 # Overview 
 
