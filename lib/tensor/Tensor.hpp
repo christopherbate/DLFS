@@ -41,12 +41,6 @@ class decl.
 template <typename T> class Tensor;
 template <typename T> using TensorPtr = std::shared_ptr<Tensor<T>>;
 
-// template <typename FeatureDataType, typename FilterDataType>
-// TensorPtr<FeatureDataType> MakeConvolve(TensorPtr<FeatureDataType> features,
-//                                         TensorPtr<FilterDataType> filter,
-//                                         Stride2D stride = {1, 1},
-//                                         Pad2D padding = {0, 0});
-
 /**
  * Tensor represents an array of double/float/half/int numbers.
  */

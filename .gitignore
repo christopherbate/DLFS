@@ -8,3 +8,5 @@ datasets
 bazel-*
 *.db
 *test.jpg
+*.pyc
+__pycache__

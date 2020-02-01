@@ -97,7 +97,7 @@ void TestImage() {
             auto filter = CreateFilter<float>(3, 1, 1, 1, "rgb2grey_filter",
                                               0.33333f, false);
             auto result =
-                MakeConvolve(tensorFloat, filter, Stride2D{1, 1}, Pad2D{0, 0});
+                Convolve(tensorFloat, filter, Stride2D{1, 1}, Pad2D{0, 0});
 
             auto res_int = result->Cast<uint8_t>();
 

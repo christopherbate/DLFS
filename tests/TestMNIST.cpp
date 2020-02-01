@@ -165,28 +165,28 @@ void TestMNIST() {
 
                 // First conv - 28x28 output
                 TensorPtr<float> features =
-                    MakeConvolve(imageBatch, f1, Stride1, Pad1);
+                    Convolve(imageBatch, f1, Stride1, Pad1);
                 features = features->ReLU();
 
                 // Second convolution - size 14x14
-                auto features2 = MakeConvolve(features, f2, Stride2, Pad1);
+                auto features2 = Convolve(features, f2, Stride2, Pad1);
                 features2 = features2->ReLU();
 
                 // Third convolution - size 7x7
-                auto features3 = MakeConvolve(features2, f3, Stride2, Pad1);
+                auto features3 = Convolve(features2, f3, Stride2, Pad1);
                 features3 = features3->ReLU();
 
                 // Fourth convolution - size 4x4
-                auto features4 = MakeConvolve(features3, f4, Stride2, Pad1);
+                auto features4 = Convolve(features3, f4, Stride2, Pad1);
                 features4 = features4->ReLU();
 
                 // Fifth convolution - size 2x2
-                auto features5 = MakeConvolve(features4, f5, Stride1, Pad0);
+                auto features5 = Convolve(features4, f5, Stride1, Pad0);
                 features5 = features5->ReLU();
 
                 // Final convolution - size Batchx1x1x10
                 auto logits =
-                    MakeConvolve(features5, out_filter, Stride1, Pad0);
+                    Convolve(features5, out_filter, Stride1, Pad0);
 
                 // auto loss = out->SigmoidCELoss(cat_ids);
                 auto loss = SigmoidCELoss(logits, cat_ids, true);

@@ -1,0 +1,8 @@
+syntax = "proto3";
+
+package runners;
+
+message Runner {
+    string hostname = 1;
+    string gpu = 2;
+}
