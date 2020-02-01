@@ -19,11 +19,11 @@ void TestDataLoader() {
         "Can intatiate data loader and retrieve batches (COCO VAL).", []() {
             DataLoader dataLoader;
             dataLoader.LoadDataset("tests/data/coco.val.ann.db");
-            dataLoader.SetDataSourcePath("/home/chris/datasets/coco/val2017/");
+            dataLoader.SetDataSourcePath("tests/data/");
             dataLoader.EnableJpegDecoder();
-            dataLoader.SetBatchSize(5);
+            dataLoader.SetBatchSize(2);
 
-            for (auto i = 0; i < 10; i++) {
+            for (auto i = 0; i < 2; i++) {
                 dataLoader.RunOnce();
                 dataLoader.Summary();
             }

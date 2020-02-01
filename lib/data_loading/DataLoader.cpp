@@ -1,8 +1,8 @@
 #include <iostream>
 #include <memory>
 
-#include "DataLoader.hpp"
 #include "../Logging.hpp"
+#include "DataLoader.hpp"
 
 using namespace DLFS;
 using namespace std;
@@ -44,12 +44,12 @@ void DataLoader::RunOnce() {
                 (m_exampleIndex + 1) % m_exampleSource.GetNumExamples();
         }
 
-        LOG.DEBUG() << "Loading image " << i;
-
         // Check if the example has an image array, if so, load it.
         if (ex->image() != NULL) {
+            LOG.DEBUG() << "Loading image " << i << " from buffer file.";
             imgBufs[i].assign(ex->image()->begin(), ex->image()->end());
         } else if (m_dataSource.get() != nullptr) {
+            LOG.DEBUG() << "Loading image " << ex->file_name()->str();
             m_dataSource->GetBlob(ex->file_name()->str(), imgBufs[i]);
         } else {
             throw std::runtime_error(

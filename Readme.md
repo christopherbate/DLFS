@@ -6,9 +6,11 @@ A deep learning C++ library built on CUDNN. The aim of this library is to provid
 alogorithms primarily for computer vision in a small, flexible package.
 
 Priorities:
-1. Support the latest capabilities offered by RTX cards. 
+
+1. Utilize latest capabilities offered by RTX cards (Tensor Cores)
+    - TODO: GPU Profiling tests for different cards / platforms
 2. Simple code base
-3. (Future) Optimized embedded runtime.
+3. Focus on mapping similar research capabilities as Detectron2 while matching/exceeding performance.
 
 ## Roadmap 
 
@@ -33,24 +35,25 @@ This library is GPU only. You must have a system with an NVIDIA GPU.
 
 We develop on Ubuntu 19.04 systems with Intel CPUs and RTX 2080 series cards. Recommend 
 you isolate your development environment from the various other software that are trying 
-to manipulate CUDA libraries and runtimes (e.g. conda).
+to manipulate CUDA libraries and runtimes (e.g.conda).
 
 Requires :
-- For build we use Bazel 2.0.0 [Install Link](https://docs.bazel.build/versions/master/install-ubuntu.html)
-- Nvidia driver (we're on 418)
-- CUDA >= 10.1 (we're developing on `cuda_10.1.243` installed with the `run` file on 19.04)
-- CuDNN 7.6.3 
-- NvJPEG
-- flatbuffer compiler (see below)
-- cmake
-- COCO 2017 images and labels (see below)
-- Lodepng (put in src/external/lodepng/lodepng.h)
+
+* For build we use Bazel 2.0.0 [Install Link](https://docs.bazel.build/versions/master/install-ubuntu.html)
+* Nvidia driver (we're on 418)
+* CUDA >= 10.1 (we're developing on `cuda_10.1.243` installed with the `run` file on 19.04)
+* CuDNN 7.6.3 
+* NvJPEG
+* flatbuffer compiler (see below)
+* cmake
+* COCO 2017 images and labels (see below)
+* Lodepng (put in src/external/lodepng/lodepng.h)
 
 ## COCO 
 
-We setup all datasets in `~/datasets`.
+We setup all datasets in `~/datasets` .
 
-```
+``` 
 mkdir -p  ~/datasets/coco && cd ~/datasets/coco
 wget http://images.cocodataset.org/zips/train2017.zip
 wget http://images.cocodataset.org/annotations/annotations_trainval2017.zip
@@ -60,18 +63,18 @@ unzip annotations_trainval2017.zip
 
 # Build
 
-Build is provided by Bazel. Binaries go into `bin`.
+Bazel is required (see above).
 
 View build dependencies:
 
-```
+``` 
 sudo apt update && sudo apt install graphviz xdot
 ./dep_graph.sh
 ```
 
 To build the library:
 
-```
+```shell
 bazel build //lib:all
 ```
 
@@ -90,6 +93,24 @@ The other tests only require some sample images which are included.
 bazel test //tests:all
 ```
 
+### Getting the testing data.
+
+Tests depend on a couple files from COCO validation set. Do the following:
+
+``` shell
+COCO=[coco2017 validation directory]
+cp COCO/000000397133.jpg tests/data 
+000000037777.jpg tests/data
+000000252219.jpg tests/data
+000000087038.jpg tests/datra
+```
+
+Run:
+
+``` shell
+bazel test //tests:all
+```
+
 # Overview 
 
 To train a deep learning model in a reproducable way, you need minimally the following things:
@@ -101,7 +122,7 @@ To train a deep learning model in a reproducable way, you need minimally the fol
  monitor progress.
  5. A standard way for serializing the model and its weights as well as the predictions
  6. The ability to serialize stateful parts of the training system to restore from checkpoint if training is interrupted.
- 7. The necessary functions for efficiently calculating various performance metrics (e.g. mAP) during/after training.
+ 7. The necessary functions for efficiently calculating various performance metrics (e.g.mAP) during/after training.
  8. A system for data augmentation, which can considerably improve model robustness and performance
 
 For inference, you need the following things:
@@ -111,9 +132,9 @@ For inference, you need the following things:
 3. Excellent logging and monitoring for production
 
 The goal is to provide all of the above in a compact library for computer vision models, focusing 
-on fast turn-around between data collection, labeling, training, inference, back to labeling. It will provide serialized formats for streaming predictions and labels to/from an system during training for effective real-time training. To do this, we leverage CuDNN for nearly all primitives within the deep learning engine, resulting in a simple, highly performant, readable and maintainable code base. 
+on fast turn-around between data collection, labeling, training, inference, back to labeling. It will provide serialized formats for streaming predictions and labels to/from an system during training for effective real-time training. To do this, we leverage CuDNN for nearly all primitives within the deep learning engine, resulting in a simple, highly performant, readable and maintainable code base.
 
-Unlike general deep learning frameworks such as PyTorch and Tensorflow, this library is completely biased towards vision systems. There are only a small set of operations which are implemented (e.g. convolution), but they are finely tuned for speed and the latest features (e.g. mixed-precision training) and research. There will b e basic primitives for bounding box operations for dense anchor-based systems as well as post-processing functions such as Non-Max Suppression. 
+Unlike general deep learning frameworks such as PyTorch and Tensorflow, this library is completely biased towards vision systems. There are only a small set of operations which are implemented (e.g.convolution), but they are finely tuned for speed and the latest features (e.g.mixed-precision training) and research. There will b e basic primitives for bounding box operations for dense anchor-based systems as well as post-processing functions such as Non-Max Suppression.
 
 Futhermore, we assume all input data is in the form of images which will be turned into 3-channel tensors. There is no notion of general n-d tensor operations like in Tensorflow, PyTorch and Numpy. There is no support for general slicing of arrays either. Nevertheless, a great deal of interesting models and research questions can be tackled within this framework, all within a simple system that can take the model into "production" environments.
 

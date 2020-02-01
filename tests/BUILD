@@ -83,7 +83,7 @@ cc_test(
     ],
     data = [
         ":test_data",
-    ],
+    ],  
     linkstatic = True,
     deps = [
         "//lib:data_loader",
