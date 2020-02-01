@@ -205,7 +205,7 @@ using ConvOpPtr = std::shared_ptr<Convolution<T, V>>;
 
 template <typename FeatureDataType, typename FilterDataType>
 TensorPtr<FeatureDataType>
-MakeConvolve(TensorPtr<FeatureDataType> features, TensorPtr<FilterDataType> filter,
+Convolve(TensorPtr<FeatureDataType> features, TensorPtr<FilterDataType> filter,
          Stride2D stride, Pad2D padding) {
     auto op = std::make_shared<Convolution<FeatureDataType, FilterDataType>>(
         features, filter, padding, stride);

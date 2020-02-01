@@ -83,10 +83,10 @@ void TestBatchNorm() {
         int printInterval = 50;
         for (int iter = 0; iter < 500; iter++) {
             ADContext.Reset();
-            auto y1 = MakeConvolve(x0, W0, Stride1, Pad0);
+            auto y1 = Convolve(x0, W0, Stride1, Pad0);
             auto f1 = y1 + B0;
             auto F1 = f1->ReLU();
-            auto f2 = MakeConvolve(F1, W1, Stride1, Pad0) + B1;
+            auto f2 = Convolve(F1, W1, Stride1, Pad0) + B1;
             auto sm = f2->Softmax();
             auto loss = SigmoidCELoss(f2, labels, true);
             if (iter % printInterval == 0) {

@@ -1,3 +1,4 @@
+# This is now depracated after move to Bazel - here only as reference
 CUDA_PATH := /usr/local/cuda
 NVCC := $(CUDA_PATH)/bin/nvcc
 CXX := $(NVCC) 

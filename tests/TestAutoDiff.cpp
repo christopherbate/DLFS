@@ -27,7 +27,7 @@ void TestAutoDiff() {
             filter->AllocateIfNecessary();
 
             TensorPtr<float> result =
-                MakeConvolve(features, filter, Stride1, Pad0);
+                Convolve(features, filter, Stride1, Pad0);
 
             QTEqual(ADContext.GetOpTraceSize(), (unsigned int)1);
         });
@@ -50,7 +50,7 @@ void TestAutoDiff() {
             filter->FillConstant(1.0);
 
             TensorPtr<float> result =
-                MakeConvolve(features, filter, Stride1, Pad0);
+                Convolve(features, filter, Stride1, Pad0);
 
             vector<float> buffer;
             result->CopyBufferToHost(buffer);
@@ -72,7 +72,7 @@ void TestAutoDiff() {
             // The gradient should accumulate
             // if we do not call reset, it creates additional operations.
             filter->FillConstant(2.0);
-            result = MakeConvolve(features, filter, Stride1, Pad0);
+            result = Convolve(features, filter, Stride1, Pad0);
             result->CopyBufferToHost(buffer);
             QTEqual(buffer.size(), 1);
             QTEqual(buffer[0], 18.0f);
@@ -90,7 +90,7 @@ void TestAutoDiff() {
             filter->ResetBackwardPasses();
             filter->FillConstant(1.0);
             features->FillConstant(2.0);
-            result = MakeConvolve(features, filter, Stride1, Pad0);
+            result = Convolve(features, filter, Stride1, Pad0);
             result->CopyBufferToHost(buffer);
             QTEqual(buffer.size(), 1);
             QTEqual(buffer[0], 18.0f);
@@ -128,7 +128,7 @@ void TestAutoDiff() {
             bias->FillConstant(3.0);
 
             TensorPtr<float> result =
-                MakeConvolve(features, filter, Stride1, Pad0);
+                Convolve(features, filter, Stride1, Pad0);
 
             TensorPtr<float> result2 = result->Add(bias);
 
@@ -174,7 +174,7 @@ void TestAutoDiff() {
             bias->FillConstant(3.0);
 
             TensorPtr<float> result =
-                MakeConvolve(features, filter, Stride1, Pad0);
+                Convolve(features, filter, Stride1, Pad0);
 
             TensorPtr<float> result2 = result->Add(bias);
 
@@ -230,7 +230,7 @@ void TestAutoDiff() {
                 CreateTensor<float>({1, 8, 8, 1}, "bias", 1.0, true);
 
             TensorPtr<float> resultFirstConv =
-                MakeConvolve(features, filter, {1, 1}, {0, 0});
+                Convolve(features, filter, {1, 1}, {0, 0});
 
             TensorPtr<float> secondFeatureMap = resultFirstConv + bias;
 
@@ -250,7 +250,7 @@ void TestAutoDiff() {
             finalBias->FillConstantGrad(0.0f);
 
             TensorPtr<float> resultSecondConv =
-                MakeConvolve(secondFeatureMap, finalFilter, Stride1, Pad0);
+                Convolve(secondFeatureMap, finalFilter, Stride1, Pad0);
 
             TensorPtr<float> result = resultSecondConv + finalBias;
 
@@ -326,32 +326,35 @@ void TestAutoDiff() {
     TestRunner::GetRunner()->AddTest(
         "AutoDiff",
         "Convolution + manual bias + second conv/bias+ pow(2) API test", []() {
-            ADContext.Reset();
+ADContext.Reset();
 
-            TensorPtr<float> features =
-                CreateTensor<float>({1, 10, 10, 3}, "features", 0.5, false);
+TensorPtr<float> features =
+    CreateTensor<float>({1, 10, 10, 3}, "features", 0.5, false);
 
-            TensorPtr<float> filter =
-                CreateFilter<float>(3, 1, 3, 3, "filter", 1.0, true);
+TensorPtr<float> filter =
+    CreateFilter<float>(3, 1, 3, 3, "filter", 1.0);
 
-            TensorPtr<float> bias =
-                CreateTensor<float>({1, 8, 8, 1}, "bias", 1.0, true);
+TensorPtr<float> bias =
+    CreateTensor<float>({1, 8, 8, 1}, "bias", 1.0);
 
-            TensorPtr<float> ft2result =
-                MakeConvolve(features, filter, Stride1, Pad0) + bias;
+TensorPtr<float> ft2result =
+    Convolve(features, filter, Stride1, Pad0) + bias;
 
-            TensorPtr<float> finalFilter =
-                CreateFilter<float>(1, 1, 8, 8, "filter2", 0.1f, true);
+TensorPtr<float> finalFilter =
+    CreateFilter<float>(1, 1, 8, 8, "filter2", 0.1f);
 
-            TensorPtr<float> finalBias =
-                CreateTensor<float>({1, 1, 1, 1}, "bias2", 3.3f, true);
+TensorPtr<float> finalBias =
+    CreateTensor<float>({1, 1, 1, 1}, "bias2", 3.3f);
 
-            TensorPtr<float> res2 =
-                MakeConvolve(ft2result, finalFilter, Stride1, Pad0) + finalBias;
+TensorPtr<float> res2 =
+    Convolve(ft2result, finalFilter, Stride1, Pad0) + finalBias;
 
-            auto powResult = res2 ^ 2.0f;
+auto powResult = res2 ^ 2.0f;
 
-            ADContext.CalcGradient(powResult);
+ADContext.CalcGradient(powResult);
+
+filter->ApplyGradient(0.1f);
+
         });
 }
 int main() {

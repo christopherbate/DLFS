@@ -8,6 +8,7 @@ proto_library(
     srcs = [
         "dlfs.proto",
         "images.proto",
+        "runners.proto",
     ],
     deps = ["@com_google_protobuf//:timestamp_proto"],
 )
